@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ジム：冷蔵庫</title>
+  
+  <!-- Firebaseの読み込み -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    body { font-family: sans-serif; text-align: center; background: #1e272e; color: white; margin: 0; padding: 20px; }
+    .card { background: #2f3640; border: 3px solid #718093; border-radius: 15px; padding: 20px; max-width: 400px; margin: 0 auto; box-shadow: 0 8px 16px rgba(0,0,0,0.4); }
+    button { background: #00a8ff; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 15px; }
+    button:active { background: #0097e6; }
+    #timer { font-size: 24px; color: #fbc531; margin: 15px 0; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h1>⚔️ ジム: 冷蔵庫</h1>
+    <p id="status">現在の状態: 読み込み中...</p>
+    
+    <div id="timer" style="display: none;">残り時間: <span id="countdown">10</span>秒</div>
+    
+    <button id="attackBtn" onclick="startBattle()">ジムに挑む</button>
+    <br><br>
+    <a href="index.html" style="color: #808e9b; text-decoration: none;">← マップに戻る</a>
+  </div>
+
+  <script>
+    // Firebase設定（メイン画面と同じものを設定）
+    const firebaseConfig = {
+      apiKey: "AIzaSyDQF-SGTV70zmFyS_Mquz_OVgn260X0Aqs",
+      authDomain: "kokemon-go.firebaseapp.com",
+      projectId: "kokemon-go",
+      storageBucket: "kokemon-go.firebasestorage.app",
+      messagingSenderId: "391436988134",
+      appId: "1:391436988134:web:2a80a98886d1a251211527"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const gymId = "reizouko";
+    const statusText = document.getElementById("status");
+    const attackBtn = document.getElementById("attackBtn");
+    const timerDiv = document.getElementById("timer");
+    const countdownSpan = document.getElementById("countdown");
+
+    // データベースから現在のジムの状態を読み込む
+    function loadGymStatus() {
+      db.collection("gyms").doc(gymId).get().then((doc) => {
+        if (doc.exists) {
+          const data = doc.data();
+          statusText.innerText = `現在のオーナー: ${data.owner || "なし"}`;
+        } else {
+          statusText.innerText = "現在のオーナー: なし（中立）";
+        }
+      }).catch((error) => {
+        console.error("読み込みエラー:", error);
+      });
+    }
+
+    // バトルの開始（放置タイマー）
+    function startBattle() {
+      attackBtn.style.display = "none";
+      timerDiv.style.display = "block";
+      
+      let timeLeft = 10; // 攻略にかかる秒数（例として10秒）
+      countdownSpan.innerText = timeLeft;
+
+      const timer = setInterval(() => {
+        timeLeft--;
+        countdownSpan.innerText = timeLeft;
+
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          timerDiv.style.display = "none";
+          attackBtn.style.display = "block";
+          
+          // 勝利したのでFirebaseに保存
+          saveGymOwner("あなた");
+        }
+      }, 1000);
+    }
+
+    // Firebaseに新しいオーナーを保存
+    function saveGymOwner(newOwner) {
+      db.collection("gyms").doc(gymId).set({
+        owner: newOwner,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(() => {
+        alert("ジムを制圧しました！");
+        loadGymStatus();
+      }).catch((error) => {
+        alert("保存に失敗しました: " + error.message);
+      });
+    }
+
+    // ページを開いたときに状態をロード
+    loadGymStatus();
+  </script>
+
+</body>
+</html>
