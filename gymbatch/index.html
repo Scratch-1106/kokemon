@@ -14,7 +14,7 @@
     h1 { text-align: center; }
     p { margin: 8px 0; }
     
-    .badge-container { display: flex; align-items: center; justify-content: space-between; background: #1e272e; padding: 15px; border-radius: 10px; margin-top: 15px; border: 3px solid #718093; transition: all 0.3s; }
+    .badge-container { display: flex; align-items: center; justify-content: space-between; background: #1e272e; padding: 15px; border-radius: 10px; margin-top: 15px; border: 3px solid #718093; }
     .badge-normal { border-color: #718093; }
     .badge-bronze { border-color: #cd7f32; }
     .badge-silver { border-color: #c0c0c0; }
@@ -25,7 +25,7 @@
     .badge-title { font-weight: bold; font-size: 18px; }
     .badge-rank { font-size: 14px; color: #fbc531; font-weight: bold; }
     .progress-bar { background: #57606f; border-radius: 5px; height: 8px; width: 100%; margin-top: 8px; overflow: hidden; }
-    .progress-fill { background: #00a8ff; height: 100%; width: 0%; transition: width 0.5s; }
+    .progress-fill { background: #00a8ff; height: 100%; width: 0%; transition: width 0.3s; }
 
     .back-link { display: block; text-align: center; margin-top: 25px; color: #808e9b; text-decoration: none; font-weight: bold; }
   </style>
@@ -36,14 +36,14 @@
 
   <div class="card">
     <h1>🏅 ジムバッチ一覧</h1>
-    <p>ジムを防衛している間、バッチがランクアップします！</p>
-    <p style="font-size: 13px; color: #718093;">（防衛成功時: +100pt / 防衛: 1分につき+1pt）</p>
+    <p>ジムの防衛状態に応じてポイントが加算されます！</p>
+    <p style="font-size: 13px; color: #718093;">（制圧: +100pt / 防衛: 1分につき+1pt）</p>
 
     <div id="badgeCard" class="badge-container badge-normal">
       <div class="badge-icon" id="badgeIcon">🛡️</div>
       <div class="badge-info">
         <div class="badge-title">冷蔵庫</div>
-        <div class="badge-rank" id="badgeRank">ランク: 未獲得</div>
+        <div class="badge-rank" id="badgeRank">ランク: 読み込み中...</div>
         <div style="font-size: 13px; color: #a4b0be;" id="badgePoints">ポイント: 0 pt</div>
         <div class="progress-bar">
           <div class="progress-fill" id="progressFill"></div>
@@ -70,3 +70,97 @@
           else if (myTeam === "red") { teamSpan.innerText = "赤チーム"; teamSpan.style.color = "#e84118"; }
           else if (myTeam === "yellow") { teamSpan.innerText = "黄チーム"; teamSpan.style.color = "#fbc531"; }
         }
+      });
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDQF-SGTV70zmFyS_Mquz_OVgn260X0Aqs",
+      authDomain: "kokemon-go.firebaseapp.com",
+      projectId: "kokemon-go",
+      storageBucket: "kokemon-go.firebasestorage.app",
+      messagingSenderId: "391436988134",
+      appId: "1:391436988134:web:2a80a98886d1a251211527"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const gymId = "reizouko";
+
+    const THRESHOLDS = {
+      bronze: 1000,
+      silver: 7200,
+      gold: 28800
+    };
+
+    const badgeCard = document.getElementById("badgeCard");
+    const badgeRank = document.getElementById("badgeRank");
+    const badgePoints = document.getElementById("badgePoints");
+    const progressFill = document.getElementById("progressFill");
+
+    let updatedAtTime = null;
+
+    function updateDisplay() {
+      if (!updatedAtTime) {
+        badgePoints.innerText = "ポイント: 0 pt";
+        badgeRank.innerText = "ランク: 未配置";
+        badgeCard.className = "badge-container badge-normal";
+        progressFill.style.width = "0%";
+        return;
+      }
+
+      // 放置された時間の分数を計算
+      const now = new Date();
+      const diffSeconds = Math.max(0, Math.floor((now - updatedAtTime) / 1000));
+      const diffMinutes = Math.floor(diffSeconds / 60);
+
+      // ★ 置いた瞬間に +100pt ＋ 1分ごとに +1pt
+      const totalPoints = 100 + diffMinutes;
+
+      badgePoints.innerText = `ポイント: ${totalPoints.toLocaleString()} pt`;
+
+      let rankName = "ノーマル";
+      let rankClass = "badge-normal";
+      let progressPercent = 0;
+
+      if (totalPoints >= THRESHOLDS.gold) {
+        rankName = "金 (ゴールド)";
+        rankClass = "badge-gold";
+        progressPercent = 100;
+      } else if (totalPoints >= THRESHOLDS.silver) {
+        rankName = "銀 (シルバー)";
+        rankClass = "badge-silver";
+        progressPercent = ((totalPoints - THRESHOLDS.silver) / (THRESHOLDS.gold - THRESHOLDS.silver)) * 100;
+      } else if (totalPoints >= THRESHOLDS.bronze) {
+        rankName = "銅 (ブロンズ)";
+        rankClass = "badge-bronze";
+        progressPercent = ((totalPoints - THRESHOLDS.bronze) / (THRESHOLDS.silver - THRESHOLDS.bronze)) * 100;
+      } else {
+        rankName = "ノーマル";
+        rankClass = "badge-normal";
+        progressPercent = (totalPoints / THRESHOLDS.bronze) * 100;
+      }
+
+      badgeCard.className = "badge-container " + rankClass;
+      badgeRank.innerText = `ランク: ${rankName}`;
+      progressFill.style.width = Math.min(100, Math.max(0, progressPercent)) + "%";
+    }
+
+    // 毎秒画面のポイント表示を更新
+    setInterval(updateDisplay, 1000);
+
+    // データベース（Firestore）のジム情報を監視
+    db.collection("gyms").doc(gymId).onSnapshot((doc) => {
+      if (doc.exists && doc.data().updatedAt) {
+        // ジムにデータ（設置日時）があれば取得
+        updatedAtTime = doc.data().updatedAt.toDate();
+      } else {
+        updatedAtTime = null;
+      }
+      updateDisplay();
+    }, (error) => {
+      console.error("エラー:", error);
+    });
+  </script>
+
+</body>
+</html>
