@@ -8,7 +8,12 @@
   <style>
     body { font-family: sans-serif; text-align: center; background: #1e272e; color: white; margin: 0; padding: 20px; }
     .card { background: #2f3640; border: 4px solid #00a8ff; border-radius: 15px; padding: 20px; max-width: 400px; margin: 0 auto; box-shadow: 0 8px 16px rgba(0,0,0,0.4); }
-    button { background: #00a8ff; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 15px; }
+    
+    .spot-photo {
+      width: 100%; height: 180px; object-fit: cover; border-radius: 10px; border: 2px solid #00a8ff; margin-bottom: 15px;
+    }
+
+    button { background: #00a8ff; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 15px; width: 100%; }
     button:disabled { background: #57606f; cursor: not-allowed; }
     .warning-msg { color: #ff6b6b; font-size: 14px; margin-top: 10px; font-weight: bold; }
     #itemResult { font-size: 18px; color: #fbc531; margin-top: 15px; font-weight: bold; }
@@ -16,15 +21,16 @@
 </head>
 <body>
 
-  <!-- 共通ヘッダーが入る場所 -->
   <div id="header-container"></div>
 
   <div class="card">
+    <img src="photo.jpg" alt="ポケストップの写真" class="spot-photo" onerror="this.style.display='none'">
+
     <h1>🌀 ポケストップ</h1>
     <p>フォトディスクを回して「きのみ」を手に入れよう！</p>
     <p id="berryCount" style="color: #ff7675; font-weight: bold;"></p>
     
-    <div id="qrWarning" class="warning-msg" style="display: none;">⚠️ 現きのQRコードからアクセスしてください</div>
+    <div id="qrWarning" class="warning-msg" style="display: none;">⚠️ 現地のQRコードからアクセスしてください</div>
     <div id="itemResult"></div>
     
     <button id="spinBtn" onclick="spinPokestop()">フォトディスクを回す</button>
@@ -58,36 +64,60 @@
     const itemResult = document.getElementById("itemResult");
     const berryCountText = document.getElementById("berryCount");
 
-    // 所持きのみ数の表示更新
+    // ポケストップごとの識別キー（必要に応じて 'stop_reizouko' などに変更可能）
+    const stopKey = "lastSpin_pokestop_default";
+    const COOLDOWN_TIME = 5 * 60 * 1000; // 5分
+
     function updateBerryDisplay() {
       const berries = parseInt(localStorage.getItem("myBerries")) || 0;
       berryCountText.innerText = `所持きのみ: ${berries}個`;
     }
-    updateBerryDisplay();
 
-    if (!hasValidQR) {
-      spinBtn.disabled = true;
-      spinBtn.innerText = "QR未読込（回せない）";
-      qrWarning.style.display = "block";
-    }
-
-    function spinPokestop() {
+    function checkSpinCooldown() {
       if (!hasValidQR) {
-        alert("現地にあるQRコードを読み込んでください！");
+        spinBtn.disabled = true;
+        spinBtn.innerText = "QR未読込（回せない）";
+        qrWarning.style.display = "block";
         return;
       }
 
-      // きのみを1〜3個ランダムでゲット
+      const lastSpin = parseInt(localStorage.getItem(stopKey)) || 0;
+      const now = Date.now();
+      const diff = now - lastSpin;
+
+      if (diff < COOLDOWN_TIME) {
+        spinBtn.disabled = true;
+        const remainSec = Math.ceil((COOLDOWN_TIME - diff) / 1000);
+        const min = Math.floor(remainSec / 60);
+        const sec = remainSec % 60;
+        spinBtn.innerText = `補給完了 (${min}:${sec < 10 ? '0' : ''}${sec})`;
+      } else {
+        spinBtn.disabled = false;
+        spinBtn.innerText = "フォトディスクを回す";
+        qrWarning.style.display = "none";
+      }
+    }
+
+    setInterval(checkSpinCooldown, 1000);
+    updateBerryDisplay();
+    checkSpinCooldown();
+
+    function spinPokestop() {
+      if (!hasValidQR) return;
+
+      const lastSpin = parseInt(localStorage.getItem(stopKey)) || 0;
+      if (Date.now() - lastSpin < COOLDOWN_TIME) return;
+
+      localStorage.setItem(stopKey, Date.now().toString());
+
       const gotBerries = Math.floor(Math.random() * 3) + 1;
       let currentBerries = parseInt(localStorage.getItem("myBerries")) || 0;
       currentBerries += gotBerries;
       localStorage.setItem("myBerries", currentBerries);
 
       updateBerryDisplay();
-
-      spinBtn.disabled = true;
-      spinBtn.innerText = "補給完了";
-      itemResult.innerText = `🎁 きのみ を ${gotBis = gotBerries}個 手に入れた！`; // 修正
+      itemResult.innerText = `🎁 きのみ を ${gotBerries}個 手に入れた！`;
+      checkSpinCooldown();
     }
   </script>
 
