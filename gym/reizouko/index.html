@@ -105,7 +105,7 @@
     const myPlayerName = localStorage.getItem("myPlayerName") || "名無しプレイヤー";
     const myTeamColor = localStorage.getItem("myTeam") || "blue";
 
-    let cachedUpdatedAt = null; // 防衛時間を計算するための保持用変数
+    let cachedUpdatedAt = null;
     let defenseTimerInterval = null;
 
     // 秒数を「○日 ○時間 ○分 ○秒」の形に変換する関数
@@ -142,9 +142,9 @@
       }, 1000);
     }
 
-    // データベースから現在のジムの状態を読み込む
-    function loadGymStatus() {
-      db.collection("gyms").doc(gymId).get().then((doc) => {
+    // データベースの変更を常時監視して自動で画面を更新する（onSnapshotを使用）
+    function watchGymStatus() {
+      db.collection("gyms").doc(gymId).onSnapshot((doc) => {
         if (doc.exists) {
           const data = doc.data();
           const owner = data.owner || "なし";
@@ -153,7 +153,6 @@
           statusText.innerText = `現在のオーナー: ${owner}`;
           gymCard.className = "card team-" + team;
 
-          // 制圧時間（updatedAt）をJavaScriptのDateオブジェクトに変換
           if (data.updatedAt) {
             cachedUpdatedAt = data.updatedAt.toDate();
             startDefenseTimer();
@@ -178,8 +177,8 @@
           attackBtn.innerText = "ジムに挑む";
           attackBtn.disabled = false;
         }
-      }).catch((error) => {
-        console.error("読み込みエラー:", error);
+      }, (error) => {
+        console.error("監視エラー:", error);
       });
     }
 
@@ -212,14 +211,14 @@
         team: teamColor,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }).then(() => {
-        alert("ジムを制圧しました！");
-        loadGymStatus();
+        // 保存成功時は onSnapshot が自動で検知して画面を更新するため、処理はシンプルでOK
       }).catch((error) => {
         alert("保存に失敗しました: " + error.message);
       });
     }
 
-    loadGymStatus();
+    // 監視を開始
+    watchGymStatus();
   </script>
 
 </body>
