@@ -92,7 +92,37 @@
   </style>
 </head>
 <body>
+<!-- ヘッダーが入る場所 -->
+<div id="header-container"></div>
 
+<script>
+  // 階層が深いページ（gym/reizouko など）ではパスを '../../header.html' に変更してね
+  fetch('/header.html')
+    .then(response => response.text())
+    .then(data => {
+      document.getElementById('header-container').innerHTML = data;
+
+      const myName = localStorage.getItem("myPlayerName") || "名無しプレイヤー";
+      const myTeam = localStorage.getItem("myTeam") || "blue";
+
+      const nameSpan = document.getElementById("headerAccountName");
+      if (nameSpan) nameSpan.innerText = myName;
+
+      const teamSpan = document.getElementById("headerTeamName");
+      if (teamSpan) {
+        if (myTeam === "blue") {
+          teamSpan.innerText = "青チーム";
+          teamSpan.style.color = "#00a8ff";
+        } else if (myTeam === "red") {
+          teamSpan.innerText = "赤チーム";
+          teamSpan.style.color = "#e84118";
+        } else if (myTeam === "yellow") {
+          teamSpan.innerText = "黄チーム";
+          teamSpan.style.color = "#fbc531";
+        }
+      }
+    });
+</script>
   <h1>🗺️ おうちポケGO</h1>
   <p>指で動かしたり拡大できます！</p>
 
