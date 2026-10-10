@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ポケストップ</title>
+
+  <style>
+    body { font-family: sans-serif; text-align: center; background: #1e272e; color: white; margin: 0; padding: 20px; }
+    .card { background: #2f3640; border: 4px solid #00a8ff; border-radius: 15px; padding: 20px; max-width: 400px; margin: 0 auto; box-shadow: 0 8px 16px rgba(0,0,0,0.4); }
+    button { background: #00a8ff; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 15px; }
+    button:disabled { background: #57606f; cursor: not-allowed; }
+    .warning-msg { color: #ff6b6b; font-size: 14px; margin-top: 10px; font-weight: bold; }
+    #itemResult { font-size: 18px; color: #fbc531; margin-top: 15px; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <!-- 共通ヘッダーが入る場所 -->
+  <div id="header-container"></div>
+
+  <div class="card">
+    <h1>🌀 ポケストップ</h1>
+    <p>フォトディスクを回して「きのみ」を手に入れよう！</p>
+    <p id="berryCount" style="color: #ff7675; font-weight: bold;"></p>
+    
+    <div id="qrWarning" class="warning-msg" style="display: none;">⚠️ 現きのQRコードからアクセスしてください</div>
+    <div id="itemResult"></div>
+    
+    <button id="spinBtn" onclick="spinPokestop()">フォトディスクを回す</button>
+    <br><br>
+    <a href="../../index.html" style="color: #808e9b; text-decoration: none;">← マップに戻る</a>
+  </div>
+
+  <script>
+    fetch('../../header.html')
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('header-container').innerHTML = data;
+        const myName = localStorage.getItem("myPlayerName") || "名無しプレイヤー";
+        const myTeam = localStorage.getItem("myTeam") || "blue";
+
+        const nameSpan = document.getElementById("headerAccountName");
+        if (nameSpan) nameSpan.innerText = myName;
+        const teamSpan = document.getElementById("headerTeamName");
+        if (teamSpan) {
+          if (myTeam === "blue") { teamSpan.innerText = "青チーム"; teamSpan.style.color = "#00a8ff"; }
+          else if (myTeam === "red") { teamSpan.innerText = "赤チーム"; teamSpan.style.color = "#e84118"; }
+          else if (myTeam === "yellow") { teamSpan.innerText = "黄チーム"; teamSpan.style.color = "#fbc531"; }
+        }
+      });
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasValidQR = urlParams.get("qr") === "open";
+
+    const spinBtn = document.getElementById("spinBtn");
+    const qrWarning = document.getElementById("qrWarning");
+    const itemResult = document.getElementById("itemResult");
+    const berryCountText = document.getElementById("berryCount");
+
+    // 所持きのみ数の表示更新
+    function updateBerryDisplay() {
+      const berries = parseInt(localStorage.getItem("myBerries")) || 0;
+      berryCountText.innerText = `所持きのみ: ${berries}個`;
+    }
+    updateBerryDisplay();
+
+    if (!hasValidQR) {
+      spinBtn.disabled = true;
+      spinBtn.innerText = "QR未読込（回せない）";
+      qrWarning.style.display = "block";
+    }
+
+    function spinPokestop() {
+      if (!hasValidQR) {
+        alert("現地にあるQRコードを読み込んでください！");
+        return;
+      }
+
+      // きのみを1〜3個ランダムでゲット
+      const gotBerries = Math.floor(Math.random() * 3) + 1;
+      let currentBerries = parseInt(localStorage.getItem("myBerries")) || 0;
+      currentBerries += gotBerries;
+      localStorage.setItem("myBerries", currentBerries);
+
+      updateBerryDisplay();
+
+      spinBtn.disabled = true;
+      spinBtn.innerText = "補給完了";
+      itemResult.innerText = `🎁 きのみ を ${gotBis = gotBerries}個 手に入れた！`; // 修正
+    }
+  </script>
+
+</body>
+</html>
