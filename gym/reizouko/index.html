@@ -44,7 +44,7 @@
     <div id="defenseTime">防衛時間: -</div>
     <div id="gymStrength">ジムの強さ: - / 60</div>
     
-    <div id="timer" style="display: none;">残り時間: <span id="countdown">10</span>秒</div>
+    <div id="timer" style="display: none;">残り時間: <span id="countdown">60</span>秒</div>
     <div id="qrWarning" class="warning-msg" style="display: none;">⚠️ 現地のQRコードからアクセスしてください</div>
     
     <button id="attackBtn" onclick="startBattle()">ジムに挑む</button>
@@ -114,7 +114,6 @@
     let defenseTimerInterval = null;
     let currentStrength = 60;
 
-    // 5分（300秒）のクールダウンタイマー処理
     const COOLDOWN_TIME = 5 * 60 * 1000;
     const gymSpinKey = "lastSpin_gym_" + gymId;
 
@@ -189,6 +188,7 @@
         if (!cachedUpdatedAt) {
           defenseTimeText.innerText = "防衛時間: -";
           strengthText.innerText = "ジムの強さ: - / 60";
+          currentStrength = 60;
           return;
         }
 
@@ -198,7 +198,6 @@
 
         defenseTimeText.innerText = `防衛時間: ${formatDefenseTime(diffSeconds)}`;
         
-        // 強さ計算：基本（60 - 経過分数） ＋ きのみ回復分（fedBonus）、最大60・最低10に制限
         const calculatedStrength = 60 - diffMinutes + cachedFedBonus;
         currentStrength = Math.min(60, Math.max(10, calculatedStrength));
         strengthText.innerText = `ジムの強さ: ${currentStrength} / 60`;
@@ -224,6 +223,7 @@
             cachedUpdatedAt = null;
             defenseTimeText.innerText = "防衛時間: 0秒";
             strengthText.innerText = "ジムの強さ: 60 / 60";
+            currentStrength = 60;
           }
 
           if (!hasValidQR) {
@@ -250,6 +250,7 @@
           strengthText.innerText = "ジムの強さ: - / 60";
           cachedUpdatedAt = null;
           cachedFedBonus = 0;
+          currentStrength = 60;
 
           if (!hasValidQR) {
             attackBtn.innerText = "QR未読込（バトル不可）";
@@ -266,6 +267,7 @@
       });
     }
 
+    // ジムの強さと同じ秒数だけバトルタイマーを動かす
     function startBattle() {
       if (!hasValidQR) {
         alert("現地にあるQRコードを読み込んでください！");
@@ -274,9 +276,11 @@
 
       attackBtn.style.display = "none";
       feedBtn.style.display = "none";
+      spinBtn.style.display = "none";
       timerDiv.style.display = "block";
       
-      let timeLeft = 10;
+      // 現在のジムの強さ（10〜60）をそのままバトル所要時間（秒）として設定
+      let timeLeft = currentStrength;
       countdownSpan.innerText = timeLeft;
 
       const timer = setInterval(() => {
@@ -287,13 +291,13 @@
           clearInterval(timer);
           timerDiv.style.display = "none";
           attackBtn.style.display = "block";
+          spinBtn.style.display = "block";
           
           saveGymOwner(myPlayerName, myTeamColor);
         }
       }, 1000);
     }
 
-    // きのみをあげて強さだけを1回復する処理
     function feedBerry() {
       let berries = parseInt(localStorage.getItem("myBerries")) || 0;
       if (berries <= 0) {
@@ -310,7 +314,6 @@
       localStorage.setItem("myBerries", berries);
       updateBerryUI();
 
-      // 防衛時間（updatedAt）は変更せず、fedBonus を +1 加算する
       db.collection("gyms").doc(gymId).update({
         fedBonus: firebase.firestore.FieldValue.increment(1)
       }).then(() => {
@@ -320,12 +323,13 @@
       });
     }
 
+    // ジムを倒して制圧した際、オーナー変更とともに日時と fedBonus を初期化
     function saveGymOwner(newOwner, teamColor) {
       db.collection("gyms").doc(gymId).set({
         owner: newOwner,
         team: teamColor,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        fedBonus: 0 // 新しく制圧した時はボーナスをリセット
+        fedBonus: 0
       }).then(() => {
         alert("ジムを制圧しました！");
       }).catch((error) => {
