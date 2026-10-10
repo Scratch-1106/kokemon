@@ -13,11 +13,11 @@
     h1 { font-size: 20px; margin-bottom: 2px; }
     p { color: #808e9b; font-size: 12px; margin-top: 0; margin-bottom: 10px; }
     
-    /* 🗺️ マップ全体の箱（ここで 7:5 の比率をしっかり作ります） */
+    /* 🗺️ 7:5の比率をキープするマップ画面 */
     #map {
       width: 100%;
-      max-width: 490px;  /* 7の倍数（例: 490px） */
-      height: 350px; /* 5の倍数（例: 350px → 490×(5/7) = 350） */
+      max-width: 490px;
+      height: 350px;
       border: 3px solid #718093;
       border-radius: 20px;
       margin: 0 auto;
@@ -25,7 +25,9 @@
       background: #2f3640;
     }
 
-    /* ジム（青）のピン */
+    /* -----------------------------------
+       🏟️ ジム（正方形の写真を綺麗な丸に収める）
+    ----------------------------------- */
     .gym-pin-container {
       position: relative;
       width: 60px;
@@ -37,12 +39,12 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      overflow: hidden; /* はみ出た部分を丸く切り抜く */
     }
     .gym-pin-container img {
       width: 100%;
       height: 100%;
-      border-radius: 50%;
-      object-fit: cover;
+      object-fit: cover; /* 正方形の画像を崩さず埋め込む */
     }
     .gym-badge {
       position: absolute;
@@ -58,14 +60,16 @@
       z-index: 10;
     }
 
-    /* ポケストップのピン */
+    /* -----------------------------------
+       🔵 ポケストップ（正方形の写真をひし形に収める）
+    ----------------------------------- */
     .stop-pin-container {
-      width: 45px;
-      height: 45px;
+      width: 50px;
+      height: 50px;
       background: #00a8ff;
       border: 3px solid #ffffff;
-      border-radius: 10px;
-      transform: rotate(45deg);
+      border-radius: 12px;
+      transform: rotate(45deg); /* 外枠をひし形にする */
       box-shadow: 0 4px 10px rgba(0,168,255,0.5);
       display: flex;
       align-items: center;
@@ -73,11 +77,11 @@
       overflow: hidden;
     }
     .stop-pin-container img {
-      width: 100%;
-      height: 100%;
+      width: 140%;
+      height: 140%;
       object-fit: cover;
-      transform: rotate(-45deg) scale(1.3);
-      border-radius: 0;
+      /* ひし形に合わせて中の画像だけ逆回転＆拡大して隙間をなくす */
+      transform: rotate(-45deg) scale(1.1);
     }
 
     /* 名前ラベル */
@@ -90,7 +94,7 @@
       border-radius: 8px;
       white-space: nowrap;
       text-align: center;
-      margin-top: 2px;
+      margin-top: 4px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.5);
     }
   </style>
@@ -100,18 +104,15 @@
   <h1>🗺️ おうちポケGO</h1>
   <p>指で動かしたり拡大できます！</p>
 
-  <!-- 地図が表示されるボックス -->
   <div id="map"></div>
 
   <!-- LeafletのJavaScript -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <script>
-    // ★ ここを「7：5」の比率の数値（例：横 700、縦 500）に設定します！
     const imageWidth = 700;
     const imageHeight = 500;
 
-    // 地図の初期化
     const map = L.map('map', {
       crs: L.CRS.Simple,
       minZoom: -1,
@@ -120,14 +121,9 @@
       attributionControl: false
     });
 
-    // map.jpeg を 7:5 のサイズ通りに配置
     const bounds = [[0, 0], [imageHeight, imageWidth]];
     const imageOverlay = L.imageOverlay('map.jpeg', bounds).addTo(map);
     map.fitBounds(bounds);
-
-    // -----------------------------------
-    // ピンの配置位置（縦0〜500、横0〜700の中で調整）
-    // -----------------------------------
 
     // 🏟️ 冷蔵庫（ジム）
     const fridgeIcon = L.divIcon({
@@ -144,24 +140,10 @@
       iconSize: [60, 80],
       iconAnchor: [30, 40]
     });
-    L.marker([180, 200], { icon: fridgeIcon }).addTo(map); // 位置調整用
+    L.marker([180, 200], { icon: fridgeIcon }).addTo(map);
 
     // 🔵 自室（ポケストップ）
     const roomIcon = L.divIcon({
       className: 'custom-pin',
       html: `
-        <a href="stop.html?spot=room" style="text-decoration: none;">
-          <div class="stop-pin-container">
-            <img src="https://images.unsplash.com/photo-1585776245991-cf89dd7fc73a?w=150" alt="自室">
-          </div>
-          <div class="custom-label">自室</div>
-        </a>
-      `,
-      iconSize: [50, 70],
-      iconAnchor: [25, 35]
-    });
-    L.marker([350, 500], { icon: roomIcon }).addTo(map); // 位置調整用
-  </script>
-
-</body>
-</html>
+        <a href="stop
