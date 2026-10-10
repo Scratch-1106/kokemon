@@ -37,12 +37,13 @@
     <br>
     <button onclick="saveAccount()">保存する</button>
     <br><br>
-    <a href="index.html" style="color: #808e9b; text-decoration: none;">← マップに戻る</a>
+    <!-- 一つ上の階層のマップに戻る -->
+    <a href="../index.html" style="color: #808e9b; text-decoration: none;">← マップに戻る</a>
   </div>
 
   <script>
-    // 共通ヘッダーの読み込み
-    fetch('/header.html')
+    // 共通ヘッダーの読み込み（一つ上の階層にある header.html を読み込む）
+    fetch('../header.html')
       .then(response => response.text())
       .then(data => {
         document.getElementById('header-container').innerHTML = data;
@@ -85,7 +86,8 @@
       localStorage.setItem("myTeam", team);
 
       alert("アカウント情報を保存しました！");
-      window.location.href = "./index.html";
+      // 保存後に一つ上の階層のマップに戻る
+      window.location.href = "../index.html";
     }
   </script>
 
