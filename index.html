@@ -106,6 +106,23 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <script>
+    // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyDQF-SGTV70zmFyS_Mquz_OVgn260X0Aqs",
+  authDomain: "kokemon-go.firebaseapp.com",
+  projectId: "kokemon-go",
+  storageBucket: "kokemon-go.firebasestorage.app",
+  messagingSenderId: "391436988134",
+  appId: "1:391436988134:web:2a80a98886d1a251211527"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
     const imageWidth = 700;
     const imageHeight = 500;
 
