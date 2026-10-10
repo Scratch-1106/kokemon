@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
@@ -12,6 +12,9 @@
   </style>
 </head>
 <body>
+
+  <!-- 共通ヘッダーが入る場所 -->
+  <div id="header-container"></div>
 
   <div class="card">
     <h1>⚙️ アカウント設定</h1>
@@ -38,6 +41,33 @@
   </div>
 
   <script>
+    // 共通ヘッダーの読み込み
+    fetch('/header.html')
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('header-container').innerHTML = data;
+
+        const myName = localStorage.getItem("myPlayerName") || "名無しプレイヤー";
+        const myTeam = localStorage.getItem("myTeam") || "blue";
+
+        const nameSpan = document.getElementById("headerAccountName");
+        if (nameSpan) nameSpan.innerText = myName;
+
+        const teamSpan = document.getElementById("headerTeamName");
+        if (teamSpan) {
+          if (myTeam === "blue") {
+            teamSpan.innerText = "青チーム";
+            teamSpan.style.color = "#00a8ff";
+          } else if (myTeam === "red") {
+            teamSpan.innerText = "赤チーム";
+            teamSpan.style.color = "#e84118";
+          } else if (myTeam === "yellow") {
+            teamSpan.innerText = "黄チーム";
+            teamSpan.style.color = "#fbc531";
+          }
+        }
+      });
+
     // ブラウザの保存機能（localStorage）を使って、端末ごとに名前やチームを覚える仕組み
     window.onload = function() {
       const savedName = localStorage.getItem("myPlayerName");
