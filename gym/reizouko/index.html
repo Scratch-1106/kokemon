@@ -34,6 +34,7 @@
     button:disabled { background: #57606f; cursor: not-allowed; }
     
     #timer { font-size: 24px; color: #fbc531; margin: 15px 0; font-weight: bold; }
+    #defenseTime { font-size: 14px; color: #718093; margin-top: 5px; }
   </style>
 </head>
 <body>
@@ -44,17 +45,17 @@
   <div class="card id-card" id="gymCard">
     <h1>⚔️ ジム: 冷蔵庫</h1>
     <p id="status">現在の状態: 読み込み中...</p>
+    <div id="defenseTime">防衛時間: -</div>
     
     <div id="timer" style="display: none;">残り時間: <span id="countdown">10</span>秒</div>
     
     <button id="attackBtn" onclick="startBattle()">ジムに挑む</button>
     <br><br>
-    <!-- パスを '../../index.html' に修正してしっかりマップに戻れるようにしたよ -->
     <a href="../../index.html" style="color: #808e9b; text-decoration: none;">← マップに戻る</a>
   </div>
 
   <script>
-    // 共通ヘッダーを読み込む処理（深い階層なので '../../header.html' を指定）
+    // 共通ヘッダーの読み込み
     fetch('../../header.html')
       .then(response => response.text())
       .then(data => {
@@ -95,14 +96,51 @@
 
     const gymId = "reizouko";
     const statusText = document.getElementById("status");
+    const defenseTimeText = document.getElementById("defenseTime");
     const attackBtn = document.getElementById("attackBtn");
     const timerDiv = document.getElementById("timer");
     const countdownSpan = document.getElementById("countdown");
     const gymCard = document.getElementById("gymCard");
 
-    // localStorage から自分の名前とチームを取得（設定画面で変えた名前が反映される！）
     const myPlayerName = localStorage.getItem("myPlayerName") || "名無しプレイヤー";
     const myTeamColor = localStorage.getItem("myTeam") || "blue";
+
+    let cachedUpdatedAt = null; // 防衛時間を計算するための保持用変数
+    let defenseTimerInterval = null;
+
+    // 秒数を「○日 ○時間 ○分 ○秒」の形に変換する関数
+    function formatDefenseTime(totalSeconds) {
+      if (totalSeconds < 0) return "0秒";
+      
+      const days = Math.floor(totalSeconds / (3600 * 24));
+      const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      let result = "";
+      if (days > 0) result += `${days}日 `;
+      if (days > 0 || hours > 0) result += `${hours}時間 `;
+      if (days > 0 || hours > 0 || minutes > 0) result += `${minutes}分 `;
+      result += `${seconds}秒`;
+
+      return result;
+    }
+
+    // 防衛時間をリアルタイムで更新するタイマー
+    function startDefenseTimer() {
+      if (defenseTimerInterval) clearInterval(defenseTimerInterval);
+
+      defenseTimerInterval = setInterval(() => {
+        if (!cachedUpdatedAt) {
+          defenseTimeText.innerText = "防衛時間: -";
+          return;
+        }
+
+        const now = new Date();
+        const diffSeconds = Math.floor((now - cachedUpdatedAt) / 1000);
+        defenseTimeText.innerText = `防衛時間: ${formatDefenseTime(diffSeconds)}`;
+      }, 1000);
+    }
 
     // データベースから現在のジムの状態を読み込む
     function loadGymStatus() {
@@ -115,7 +153,15 @@
           statusText.innerText = `現在のオーナー: ${owner}`;
           gymCard.className = "card team-" + team;
 
-          // 自分がすでに持っているジムなら攻撃ボタンを押せないようにする
+          // 制圧時間（updatedAt）をJavaScriptのDateオブジェクトに変換
+          if (data.updatedAt) {
+            cachedUpdatedAt = data.updatedAt.toDate();
+            startDefenseTimer();
+          } else {
+            cachedUpdatedAt = null;
+            defenseTimeText.innerText = "防衛時間: 0秒";
+          }
+
           if (owner === myPlayerName) {
             attackBtn.innerText = "自分のジムです（防衛中）";
             attackBtn.disabled = true;
@@ -127,6 +173,8 @@
         } else {
           statusText.innerText = "現在のオーナー: なし（中立）";
           gymCard.className = "card team-neutral";
+          defenseTimeText.innerText = "防衛時間: -";
+          cachedUpdatedAt = null;
           attackBtn.innerText = "ジムに挑む";
           attackBtn.disabled = false;
         }
@@ -152,7 +200,6 @@
           timerDiv.style.display = "none";
           attackBtn.style.display = "block";
           
-          // 勝利したので、自分の名前と「自分が選んだチームの色」でFirebaseに保存！
           saveGymOwner(myPlayerName, myTeamColor);
         }
       }, 1000);
