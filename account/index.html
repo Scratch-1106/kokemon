@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>アカウント情報 - おうちポケGO</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; background: #1e272e; color: white; margin: 0; padding: 20px; }
+    .card { background: #2f3640; border: 3px solid #718093; border-radius: 15px; padding: 20px; max-width: 400px; margin: 0 auto; box-shadow: 0 8px 16px rgba(0,0,0,0.4); }
+    input, select { padding: 10px; font-size: 16px; border-radius: 8px; border: 1px solid #718093; background: #1e272e; color: white; margin: 10px 0; width: 80%; }
+    button { background: #00a8ff; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h1>⚙️ アカウント設定</h1>
+    <p>あなたのプレイヤー情報を変更できます</p>
+
+    <div>
+      <label>プレイヤー名:</label><br>
+      <input type="text" id="playerNameInput" value="自分">
+    </div>
+
+    <div>
+      <label>所属チーム:</label><br>
+      <select id="teamSelect">
+        <option value="blue">青チーム</option>
+        <option value="red">赤チーム</option>
+        <option value="yellow">黄チーム</option>
+      </select>
+    </div>
+
+    <br>
+    <button onclick="saveAccount()">保存する</button>
+    <br><br>
+    <a href="index.html" style="color: #808e9b; text-decoration: none;">← マップに戻る</a>
+  </div>
+
+  <script>
+    // ブラウザの保存機能（localStorage）を使って、端末ごとに名前やチームを覚える仕組み
+    window.onload = function() {
+      const savedName = localStorage.getItem("myPlayerName");
+      const savedTeam = localStorage.getItem("myTeam");
+
+      if (savedName) document.getElementById("playerNameInput").value = savedName;
+      if (savedTeam) document.getElementById("teamSelect").value = savedTeam;
+    };
+
+    function saveAccount() {
+      const name = document.getElementById("playerNameInput").value;
+      const team = document.getElementById("teamSelect").value;
+
+      localStorage.setItem("myPlayerName", name);
+      localStorage.setItem("myTeam", team);
+
+      alert("アカウント情報を保存しました！");
+      window.location.href = "index.html";
+    }
+  </script>
+
+</body>
+</html>
