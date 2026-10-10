@@ -13,11 +13,11 @@
     h1 { font-size: 20px; margin-bottom: 2px; }
     p { color: #808e9b; font-size: 12px; margin-top: 0; margin-bottom: 10px; }
     
-    /* 🗺️ 地図を表示するコンテナ（横幅100%、高さは固定の350pxにするのが一番確実です！） */
+    /* 🗺️ マップ全体の箱（ここで 7:5 の比率をしっかり作ります） */
     #map {
       width: 100%;
-      max-width: 450px;
-      height: 350px; 
+      max-width: 490px;  /* 7の倍数（例: 490px） */
+      height: 350px; /* 5の倍数（例: 350px → 490×(5/7) = 350） */
       border: 3px solid #718093;
       border-radius: 20px;
       margin: 0 auto;
@@ -107,22 +107,27 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <script>
-    const imageWidth = 1000;
-    const imageHeight = 1000;
+    // ★ ここを「7：5」の比率の数値（例：横 700、縦 500）に設定します！
+    const imageWidth = 700;
+    const imageHeight = 500;
 
     // 地図の初期化
     const map = L.map('map', {
       crs: L.CRS.Simple,
-      minZoom: -2,
-      maxZoom: 3,
+      minZoom: -1,
+      maxZoom: 2,
       zoomControl: false,
       attributionControl: false
     });
 
-    // map.jpeg を背景に設定
+    // map.jpeg を 7:5 のサイズ通りに配置
     const bounds = [[0, 0], [imageHeight, imageWidth]];
     const imageOverlay = L.imageOverlay('map.jpeg', bounds).addTo(map);
     map.fitBounds(bounds);
+
+    // -----------------------------------
+    // ピンの配置位置（縦0〜500、横0〜700の中で調整）
+    // -----------------------------------
 
     // 🏟️ 冷蔵庫（ジム）
     const fridgeIcon = L.divIcon({
@@ -139,7 +144,7 @@
       iconSize: [60, 80],
       iconAnchor: [30, 40]
     });
-    L.marker([350, 400], { icon: fridgeIcon }).addTo(map);
+    L.marker([180, 200], { icon: fridgeIcon }).addTo(map); // 位置調整用
 
     // 🔵 自室（ポケストップ）
     const roomIcon = L.divIcon({
@@ -155,7 +160,7 @@
       iconSize: [50, 70],
       iconAnchor: [25, 35]
     });
-    L.marker([700, 700], { icon: roomIcon }).addTo(map);
+    L.marker([350, 500], { icon: roomIcon }).addTo(map); // 位置調整用
   </script>
 
 </body>
