@@ -110,6 +110,7 @@
     const hasValidQR = urlParams.get("qr") === "open";
 
     let cachedUpdatedAt = null;
+    let cachedFedBonus = 0;
     let defenseTimerInterval = null;
     let currentStrength = 60;
 
@@ -196,7 +197,10 @@
         const diffMinutes = Math.floor(diffSeconds / 60);
 
         defenseTimeText.innerText = `防衛時間: ${formatDefenseTime(diffSeconds)}`;
-        currentStrength = Math.max(10, 60 - diffMinutes);
+        
+        // 強さ計算：基本（60 - 経過分数） ＋ きのみ回復分（fedBonus）、最大60・最低10に制限
+        const calculatedStrength = 60 - diffMinutes + cachedFedBonus;
+        currentStrength = Math.min(60, Math.max(10, calculatedStrength));
         strengthText.innerText = `ジムの強さ: ${currentStrength} / 60`;
       }, 1000);
     }
@@ -210,6 +214,8 @@
 
           statusText.innerText = `現在のオーナー: ${owner}`;
           gymCard.className = "card team-" + team;
+
+          cachedFedBonus = data.fedBonus || 0;
 
           if (data.updatedAt) {
             cachedUpdatedAt = data.updatedAt.toDate();
@@ -243,6 +249,7 @@
           defenseTimeText.innerText = "防衛時間: -";
           strengthText.innerText = "ジムの強さ: - / 60";
           cachedUpdatedAt = null;
+          cachedFedBonus = 0;
 
           if (!hasValidQR) {
             attackBtn.innerText = "QR未読込（バトル不可）";
@@ -286,6 +293,7 @@
       }, 1000);
     }
 
+    // きのみをあげて強さだけを1回復する処理
     function feedBerry() {
       let berries = parseInt(localStorage.getItem("myBerries")) || 0;
       if (berries <= 0) {
@@ -302,21 +310,22 @@
       localStorage.setItem("myBerries", berries);
       updateBerryUI();
 
-      if (cachedUpdatedAt) {
-        const newUpdatedAt = new Date(cachedUpdatedAt.getTime() + 60 * 1000);
-        db.collection("gyms").doc(gymId).update({
-          updatedAt: firebase.firestore.Timestamp.fromDate(newUpdatedAt)
-        }).then(() => {
-          alert("きのみをあげて、ジムの強さが1回復した！");
-        });
-      }
+      // 防衛時間（updatedAt）は変更せず、fedBonus を +1 加算する
+      db.collection("gyms").doc(gymId).update({
+        fedBonus: firebase.firestore.FieldValue.increment(1)
+      }).then(() => {
+        alert("きのみをあげて、ジムの強さが1回復した！");
+      }).catch((error) => {
+        alert("きのみをあげるのに失敗しました: " + error.message);
+      });
     }
 
     function saveGymOwner(newOwner, teamColor) {
       db.collection("gyms").doc(gymId).set({
         owner: newOwner,
         team: teamColor,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        fedBonus: 0 // 新しく制圧した時はボーナスをリセット
       }).then(() => {
         alert("ジムを制圧しました！");
       }).catch((error) => {
