@@ -16,7 +16,7 @@
     p { margin: 8px 0; }
     
     /* バッチのランクごとのデザイン */
-    .badge-container { display: flex; align-items: center; justify-content: space-between; background: #1e272e; padding: 15px; border-radius: 10px; margin-top: 15px; border: 3px solid #718093; }
+    .badge-container { display: flex; align-items: center; justify-content: space-between; background: #1e272e; padding: 15px; border-radius: 10px; margin-top: 15px; border: 3px solid #718093; transition: border-color 0.3s; }
     .badge-normal { border-color: #718093; }
     .badge-bronze { border-color: #cd7f32; }
     .badge-silver { border-color: #c0c0c0; }
@@ -101,11 +101,6 @@
     const myPlayerName = localStorage.getItem("myPlayerName") || "名無しプレイヤー";
     const gymId = "reizouko";
 
-    // ランクアップのポイント基準
-    // 金ランク到達ライン：20日防衛 ＝ 20日 × 24時間 × 60分 = 28,800分（＝28,800pt）
-    // 銅: 1,000pt（約16時間防衛 or 制圧10回分など）
-    // 銀: 7,200pt（5日防衛）
-    // 金: 28,800pt（20日防衛）
     const THRESHOLDS = {
       bronze: 1000,
       silver: 7200,
@@ -113,65 +108,90 @@
     };
 
     const badgeCard = document.getElementById("badgeCard");
-    const badgeIcon = document.getElementById("badgeIcon");
     const badgeRank = document.getElementById("badgeRank");
     const badgePoints = document.getElementById("badgePoints");
     const progressFill = document.getElementById("progressFill");
 
-    // Firestoreからジム情報を取得してポイントとバッチランクを計算
-    db.collection("gyms").doc(gymId).get().then((doc) => {
-      let totalPoints = 0;
+    let cachedUpdatedAt = null;
+    let isOwner = false;
+    let pointsInterval = null;
 
-      if (doc.exists) {
-        const data = doc.data();
-        const owner = data.owner;
-
-        // もし自分が現在のオーナー、または過去に制圧した実績などの計算
-        // ここでは簡易的に「自分がオーナーである場合」の防衛時間と制圧ボーナスを計算します
-        if (owner === myPlayerName && data.updatedAt) {
-          const updatedAt = data.updatedAt.toDate();
-          const now = new Date();
-          const diffMinutes = Math.floor((now - updatedAt) / (1000 * 60)); // 防衛分数
-          
-          // 制圧ボーナス 100pt ＋ 防衛1分につき 1pt
-          totalPoints = 100 + Math.max(0, diffMinutes);
-        }
-      }
-
-      updateBadgeUI(totalPoints);
-    }).catch((error) => {
-      console.error("データ取得エラー:", error);
-      updateBadgeUI(0);
-    });
-
-    function updateBadgeUI(points) {
+    // 画面上のUIを更新する関数
+    function renderBadge(points) {
       badgePoints.innerText = `ポイント: ${points.toLocaleString()} pt`;
 
       let rankName = "ノーマル";
       let rankClass = "badge-normal";
-      let nextTarget = THRESHOLDS.bronze;
       let progressPercent = 0;
 
       if (points >= THRESHOLDS.gold) {
         rankName = "金 (ゴールド)";
         rankClass = "badge-gold";
         progressPercent = 100;
-        nextTarget = THRESHOLDS.gold;
       } else if (points >= THRESHOLDS.silver) {
         rankName = "銀 (シルバー)";
         rankClass = "badge-silver";
         progressPercent = ((points - THRESHOLDS.silver) / (THRESHOLDS.gold - THRESHOLDS.silver)) * 100;
-        nextTarget = THRESHOLDS.gold;
       } else if (points >= THRESHOLDS.bronze) {
         rankName = "銅 (ブロンズ)";
         rankClass = "badge-bronze";
         progressPercent = ((points - THRESHOLDS.bronze) / (THRESHOLDS.silver - THRESHOLDS.bronze)) * 100;
-        nextTarget = THRESHOLDS.silver;
       } else {
         rankName = "ノーマル";
         rankClass = "badge-normal";
         progressPercent = (points / THRESHOLDS.bronze) * 100;
-        nextTarget = THRESHOLDS.bronze;
       }
 
       badgeCard.className = "badge-container " + rankClass;
+      badgeRank.innerText = `ランク: ${rankName}`;
+      progressFill.style.width = Math.min(100, Math.max(0, progressPercent)) + "%";
+    }
+
+    // 毎秒ポイントを再計算してリアルタイムに反映するタイマー
+    function startPointsTimer() {
+      if (pointsInterval) clearInterval(pointsInterval);
+
+      pointsInterval = setInterval(() => {
+        let totalPoints = 0;
+        if (isOwner && cachedUpdatedAt) {
+          const now = new Date();
+          const diffMinutes = Math.floor((now - cachedUpdatedAt) / (1000 * 60));
+          totalPoints = 100 + Math.max(0, diffMinutes);
+        }
+        renderBadge(totalPoints);
+      }, 1000);
+    }
+
+    // Firestoreの変更をリアルタイムで監視 (onSnapshot)
+    db.collection("gyms").doc(gymId).onSnapshot((doc) => {
+      if (doc.exists) {
+        const data = doc.data();
+        const owner = data.owner;
+
+        if (owner === myPlayerName && data.updatedAt) {
+          isOwner = true;
+          cachedUpdatedAt = data.updatedAt.toDate();
+        } else {
+          isOwner = false;
+          cachedUpdatedAt = null;
+        }
+      } else {
+        isOwner = false;
+        cachedUpdatedAt = null;
+      }
+
+      // 即時反映とタイマー開始
+      let initialPoints = 0;
+      if (isOwner && cachedUpdatedAt) {
+        const diffMinutes = Math.floor((new Date() - cachedUpdatedAt) / (1000 * 60));
+        initialPoints = 100 + Math.max(0, diffMinutes);
+      }
+      renderBadge(initialPoints);
+      startPointsTimer();
+    }, (error) => {
+      console.error("監視エラー:", error);
+    });
+  </script>
+
+</body>
+</html>
