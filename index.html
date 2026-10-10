@@ -4,77 +4,41 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>おうちポケGO - マップ</title>
+  
+  <!-- Leaflet（地図ライブラリ）のCSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
   <style>
-    body { font-family: sans-serif; text-align: center; background: #1e272e; color: white; margin: 0; padding: 20px; }
-    h1 { font-size: 22px; margin-bottom: 5px; }
-    p { color: #808e9b; font-size: 13px; margin-top: 0; }
+    body { font-family: sans-serif; text-align: center; background: #1e272e; color: white; margin: 0; padding: 10px; }
+    h1 { font-size: 20px; margin-bottom: 2px; }
+    p { color: #808e9b; font-size: 12px; margin-top: 0; margin-bottom: 10px; }
     
-    /* 🗺️ 背景に自分の写真地図を敷くコンテナ */
-    .map-container {
-      position: relative;
+    /* マップ表示エリア */
+    #map {
       width: 100%;
-      max-width: 400px;
-      height: 400px;
-      /* ▼ ここにGitHubに入れた写真のファイル名を書く (例: map.png) */
-      background-image: url('map.jpeg'); 
-      background-size: cover; /* 写真を綺麗に枠いっぱいに広げる */
-      background-position: center; /* 写真の真ん中を合わせる */
-      
+      max-width: 450px;
+      height: 450px;
       border: 3px solid #718093;
       border-radius: 20px;
-      margin: 20px auto;
+      margin: 0 auto;
       box-shadow: 0 8px 16px rgba(0,0,0,0.4);
-      overflow: hidden;
+      background: #2f3640;
     }
 
-    /* スポット全体の共通スタイル */
-    .spot-wrapper {
-      position: absolute;
-      transform: translate(-50%, -50%);
-      text-align: center;
-      text-decoration: none;
-      transition: transform 0.1s;
-      z-index: 10;
-    }
-    .spot-wrapper:active { transform: translate(-50%, -50%) scale(0.9); }
-
-    /* ポケストップ（青いひし形キューブ） */
-    .stop-icon {
-      width: 50px;
-      height: 50px;
-      background: #00a8ff;
-      border: 3px solid #ffffff;
-      border-radius: 12px;
-      transform: rotate(45deg);
-      margin: 10px auto 15px auto;
-      box-shadow: 0 4px 10px rgba(0,168,255,0.5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
-    .stop-icon img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transform: rotate(-45deg) scale(1.3);
-    }
-
-    /* ジム（青ジム） */
-    .gym-icon {
+    /* ジムのピン */
+    .gym-pin-container {
       position: relative;
-      width: 70px;
-      height: 70px;
+      width: 60px;
+      height: 60px;
       border-radius: 50%;
-      margin: 0 auto 5px auto;
-      box-shadow: 0 6px 14px rgba(0,0,0,0.6);
+      border: 4px solid #00a8ff;
+      background: #00a8ff;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
       display: flex;
       align-items: center;
       justify-content: center;
-      border: 5px solid #00a8ff;
-      background: #00a8ff;
     }
-    .gym-icon img {
+    .gym-pin-container img {
       width: 100%;
       height: 100%;
       border-radius: 50%;
@@ -82,59 +46,112 @@
     }
     .gym-badge {
       position: absolute;
-      top: -5px;
-      right: -5px;
+      top: -6px;
+      right: -6px;
       background: #fbc531;
       color: #000;
-      font-size: 12px;
-      padding: 3px 6px;
+      font-size: 10px;
+      padding: 2px 5px;
       border-radius: 50%;
       border: 2px solid white;
       font-weight: bold;
     }
 
-    /* 名前タグ */
-    .spot-name {
-      color: white;
-      font-size: 11px;
-      font-weight: bold;
-      background: rgba(0, 0, 0, 0.7);
-      padding: 3px 8px;
+    /* ポケストップのピン */
+    .stop-pin-container {
+      width: 45px;
+      height: 45px;
+      background: #00a8ff;
+      border: 3px solid #ffffff;
       border-radius: 10px;
-      white-space: nowrap;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+      transform: rotate(45deg);
+      box-shadow: 0 4px 10px rgba(0,168,255,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .stop-pin-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: rotate(-45deg) scale(1.3);
     }
 
-    /* --- 写真のどこに配置するかを % で調整する --- */
-    #fridge-gym { top: 35%; left: 30%; } /* 冷蔵庫の位置 */
-    #room-stop { top: 75%; left: 70%; }   /* 自室の位置 */
+    /* 名前ラベル */
+    .custom-label {
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      font-size: 10px;
+      font-weight: bold;
+      padding: 2px 6px;
+      border-radius: 8px;
+      white-space: nowrap;
+      text-align: center;
+      margin-top: 2px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
   </style>
 </head>
 <body>
 
   <h1>🗺️ おうちポケGO</h1>
-  <p>スポットをタップ！</p>
+  <p>指で動かしたり拡大できます！</p>
 
-  <div class="map-container">
-    
-    <!-- 冷蔵庫（ジム） -->
-    <a href="gym.html?spot=fridge" id="fridge-gym" class="spot-wrapper">
-      <div class="gym-icon">
-        <span class="gym-badge">⚔️</span>
-        <img src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=150" alt="冷蔵庫">
-      </div>
-      <div class="spot-name">冷蔵庫</div>
-    </a>
+  <div id="map"></div>
 
-    <!-- 自室（ポケストップ） -->
-    <a href="stop.html?spot=room" id="room-stop" class="spot-wrapper">
-      <div class="stop-icon">
-        <img src="https://images.unsplash.com/photo-1585776245991-cf89dd7fc73a?w=150" alt="自室">
-      </div>
-      <div class="spot-name">自室</div>
-    </a>
+  <!-- LeafletのJavaScript -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  </div>
+  <script>
+    const imageWidth = 1000;
+    const imageHeight = 1000;
+
+    const map = L.map('map', {
+      crs: L.CRS.Simple,
+      minZoom: -1,
+      maxZoom: 2,
+      zoomControl: false
+    });
+
+    // ★ map.jpeg を背景に設定
+    const bounds = [[0, 0], [imageHeight, imageWidth]];
+    const imageOverlay = L.imageOverlay('map.jpeg', bounds).addTo(map);
+    map.fitBounds(bounds);
+
+    // 🏟️ 冷蔵庫（ジム）
+    const fridgeIcon = L.divIcon({
+      className: 'custom-pin',
+      html: `
+        <a href="gym.html?spot=fridge" style="text-decoration: none;">
+          <div class="gym-pin-container">
+            <span class="gym-badge">⚔️</span>
+            <img src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=150" alt="冷蔵庫">
+          </div>
+          <div class="custom-label">冷蔵庫</div>
+        </a>
+      `,
+      iconSize: [60, 80],
+      iconAnchor: [30, 40]
+    });
+    L.marker([350, 400], { icon: fridgeIcon }).addTo(map);
+
+    // 🔵 自室（ポケストップ）
+    const roomIcon = L.divIcon({
+      className: 'custom-pin',
+      html: `
+        <a href="stop.html?spot=room" style="text-decoration: none;">
+          <div class="stop-pin-container">
+            <img src="https://images.unsplash.com/photo-1585776245991-cf89dd7fc73a?w=150" alt="自室">
+          </div>
+          <div class="custom-label">自室</div>
+        </a>
+      `,
+      iconSize: [50, 70],
+      iconAnchor: [25, 35]
+    });
+    L.marker([700, 700], { icon: roomIcon }).addTo(map);
+  </script>
 
 </body>
 </html>
