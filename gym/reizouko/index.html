@@ -24,7 +24,7 @@
       transition: border-color 0.3s;
     }
 
-    /* チームごとの色（例: 青チーム、赤チーム、黄チーム、中立） */
+    /* チームごとの色 */
     .team-blue { border-color: #00a8ff; }
     .team-red { border-color: #e84118; }
     .team-yellow { border-color: #fbc531; }
@@ -38,6 +38,9 @@
 </head>
 <body>
 
+  <!-- 共通ヘッダーが入る場所 -->
+  <div id="header-container"></div>
+
   <div class="card id-card" id="gymCard">
     <h1>⚔️ ジム: 冷蔵庫</h1>
     <p id="status">現在の状態: 読み込み中...</p>
@@ -46,10 +49,38 @@
     
     <button id="attackBtn" onclick="startBattle()">ジムに挑む</button>
     <br><br>
-    <a href="index.html" style="color: #808e9b; text-decoration: none;">← マップに戻る</a>
+    <!-- パスを '../../index.html' に修正してしっかりマップに戻れるようにしたよ -->
+    <a href="../../index.html" style="color: #808e9b; text-decoration: none;">← マップに戻る</a>
   </div>
 
   <script>
+    // 共通ヘッダーを読み込む処理（深い階層なので '../../header.html' を指定）
+    fetch('../../header.html')
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('header-container').innerHTML = data;
+
+        const myName = localStorage.getItem("myPlayerName") || "名無しプレイヤー";
+        const myTeam = localStorage.getItem("myTeam") || "blue";
+
+        const nameSpan = document.getElementById("headerAccountName");
+        if (nameSpan) nameSpan.innerText = myName;
+
+        const teamSpan = document.getElementById("headerTeamName");
+        if (teamSpan) {
+          if (myTeam === "blue") {
+            teamSpan.innerText = "青チーム";
+            teamSpan.style.color = "#00a8ff";
+          } else if (myTeam === "red") {
+            teamSpan.innerText = "赤チーム";
+            teamSpan.style.color = "#e84118";
+          } else if (myTeam === "yellow") {
+            teamSpan.innerText = "黄チーム";
+            teamSpan.style.color = "#fbc531";
+          }
+        }
+      });
+
     const firebaseConfig = {
       apiKey: "AIzaSyDQF-SGTV70zmFyS_Mquz_OVgn260X0Aqs",
       authDomain: "kokemon-go.firebaseapp.com",
@@ -69,9 +100,9 @@
     const countdownSpan = document.getElementById("countdown");
     const gymCard = document.getElementById("gymCard");
 
-    // 自分のプレイヤーID（ブラウザごとに簡易的に固定、または「自分」とする）
-    // 本来はログイン機能をつけるけど、まずは簡易的に「自分」を識別するよ
-    const myPlayerName = "自分"; 
+    // localStorage から自分の名前とチームを取得（設定画面で変えた名前が反映される！）
+    const myPlayerName = localStorage.getItem("myPlayerName") || "名無しプレイヤー";
+    const myTeamColor = localStorage.getItem("myTeam") || "blue";
 
     // データベースから現在のジムの状態を読み込む
     function loadGymStatus() {
@@ -79,14 +110,12 @@
         if (doc.exists) {
           const data = doc.data();
           const owner = data.owner || "なし";
-          const team = data.team || "neutral"; // blue, red, yellow, neutral
+          const team = data.team || "neutral";
 
           statusText.innerText = `現在のオーナー: ${owner}`;
-
-          // チームの色をカードに反映
           gymCard.className = "card team-" + team;
 
-          // もし自分がすでに持っているジムなら、攻撃ボタンを押せないようにする
+          // 自分がすでに持っているジムなら攻撃ボタンを押せないようにする
           if (owner === myPlayerName) {
             attackBtn.innerText = "自分のジムです（防衛中）";
             attackBtn.disabled = true;
@@ -111,7 +140,7 @@
       attackBtn.style.display = "none";
       timerDiv.style.display = "block";
       
-      let timeLeft = 10; // 攻略秒数
+      let timeLeft = 10;
       countdownSpan.innerText = timeLeft;
 
       const timer = setInterval(() => {
@@ -123,8 +152,8 @@
           timerDiv.style.display = "none";
           attackBtn.style.display = "block";
           
-          // 勝利したのでFirebaseに保存（チームは例として青チーム「blue」にするよ）
-          saveGymOwner(myPlayerName, "blue");
+          // 勝利したので、自分の名前と「自分が選んだチームの色」でFirebaseに保存！
+          saveGymOwner(myPlayerName, myTeamColor);
         }
       }, 1000);
     }
