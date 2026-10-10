@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>おうちポケGO - マップ</title>
+  <title>おうちポケGO - MAP</title>
   
   <!-- LeafletのCSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -13,12 +13,11 @@
     h1 { font-size: 20px; margin-bottom: 2px; }
     p { color: #808e9b; font-size: 12px; margin-top: 0; margin-bottom: 10px; }
     
-    /* 🗺️ マップコンテナ（高さが消えないようにしっかり指定） */
     #map {
       width: 100%;
       max-width: 490px;
       height: 350px;
-      min-height: 350px; /* 絶対に潰れないようにするガード */
+      min-height: 350px;
       border: 3px solid #718093;
       border-radius: 20px;
       margin: 0 auto;
@@ -26,7 +25,6 @@
       background: #2f3640;
     }
 
-    /* 🏟️ ジム（丸型のピン） */
     .gym-pin-container {
       position: relative;
       width: 60px;
@@ -59,7 +57,6 @@
       z-index: 10;
     }
 
-    /* 🔵 ポケストップ（ひし形型のピン） */
     .stop-pin-container {
       width: 50px;
       height: 50px;
@@ -80,7 +77,6 @@
       transform: rotate(-45deg) scale(1.1);
     }
 
-    /* 名前ラベル */
     .custom-label {
       background: rgba(0, 0, 0, 0.7);
       color: white;
@@ -105,24 +101,25 @@
   <!-- LeafletのJavaScript -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+  <!-- Firebaseの互換ライブラリ読み込み -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
   <script>
-    // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+    // あなたのFirebase設定
+    const firebaseConfig = {
+      apiKey: "AIzaSyDQF-SGTV70zmFyS_Mquz_OVgn260X0Aqs",
+      authDomain: "kokemon-go.firebaseapp.com",
+      projectId: "kokemon-go",
+      storageBucket: "kokemon-go.firebasestorage.app",
+      messagingSenderId: "391436988134",
+      appId: "1:391436988134:web:2a80a98886d1a251211527"
+    };
 
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyDQF-SGTV70zmFyS_Mquz_OVgn260X0Aqs",
-  authDomain: "kokemon-go.firebaseapp.com",
-  projectId: "kokemon-go",
-  storageBucket: "kokemon-go.firebasestorage.app",
-  messagingSenderId: "391436988134",
-  appId: "1:391436988134:web:2a80a98886d1a251211527"
-};
+    // Firebaseの初期化
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
     const imageWidth = 700;
     const imageHeight = 500;
 
@@ -134,12 +131,10 @@ const app = initializeApp(firebaseConfig);
       attributionControl: false
     });
 
-    // 背景の地図画像読み込み（map.jpeg）
     const bounds = [[0, 0], [imageHeight, imageWidth]];
     const imageOverlay = L.imageOverlay('map.jpeg', bounds).addTo(map);
     map.fitBounds(bounds);
 
-    // 🏟️ 冷蔵庫（ジム）※フォルダを使う場合は 'pokesuto/rei.jpeg' のように書けます
     const fridgeIcon = L.divIcon({
       className: 'custom-pin',
       html: `
@@ -156,22 +151,9 @@ const app = initializeApp(firebaseConfig);
     });
     L.marker([180, 200], { icon: fridgeIcon }).addTo(map);
 
-    // 🔵 自室（ポケストップ）
     const roomIcon = L.divIcon({
       className: 'custom-pin',
       html: `
         <a href="stop.html?spot=room" style="text-decoration: none;">
           <div class="stop-pin-container">
-            <img src="https://images.unsplash.com/photo-1585776245991-cf89dd7fc73a?w=150" alt="自室">
-          </div>
-          <div class="custom-label">自室</div>
-        </a>
-      `,
-      iconSize: [50, 70],
-      iconAnchor: [25, 35]
-    });
-    L.marker([350, 500], { icon: roomIcon }).addTo(map);
-  </script>
-
-</body>
-</html>
+            <img src="
