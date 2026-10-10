@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
@@ -19,6 +19,16 @@
     .team-yellow { border-color: #fbc531; }
     .team-neutral { border-color: #718093; }
 
+    /* スポットの写真スタイル */
+    .spot-photo {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      border-radius: 10px;
+      border: 2px solid #718093;
+      margin-bottom: 15px;
+    }
+
     button { background: #00a8ff; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; width: 100%; }
     button:disabled { background: #57606f; cursor: not-allowed; }
     
@@ -32,6 +42,9 @@
   <div id="header-container"></div>
 
   <div class="card" id="gymCard">
+    <!-- スポットの写真（同じフォルダに photo.jpg を置く場合） -->
+    <img src="photo.jpg" alt="冷蔵庫ジムの写真" class="spot-photo" onerror="this.style.display='none'">
+
     <h1>⚔️ ジム: 冷蔵庫</h1>
     <p id="status">現在の状態: 読み込み中...</p>
     <div id="defenseTime">防衛時間: -</div>
@@ -114,7 +127,6 @@
       return result;
     }
 
-    // きのみの所持数を画面に反映
     function updateBerryUI() {
       const berries = parseInt(localStorage.getItem("myBerries")) || 0;
       berryNumSpan.innerText = berries;
@@ -137,7 +149,6 @@
 
         defenseTimeText.innerText = `防衛時間: ${formatDefenseTime(diffSeconds)}`;
 
-        // 強さ計算：最大60、1分ごとに-1、最低10
         currentStrength = Math.max(10, 60 - diffMinutes);
         strengthText.innerText = `ジムの強さ: ${currentStrength} / 60`;
       }, 1000);
@@ -172,7 +183,7 @@
             if (owner === myPlayerName) {
               attackBtn.innerText = "自分のジムです（防衛中）";
               attackBtn.disabled = true;
-              feedBtn.style.display = "block"; // 自分のジムならきのみをあげられる
+              feedBtn.style.display = "block";
             } else {
               attackBtn.innerText = "ジムに挑む";
               attackBtn.disabled = false;
@@ -182,7 +193,6 @@
 
         } else {
           statusText.innerText = "現在のオーナー: なし（中立）";
-          gymCard.className = "card team-neutral";
           defenseTimeText.innerText = "防衛時間: -";
           strengthText.innerText = "ジムの強さ: - / 60";
           cachedUpdatedAt = null;
@@ -199,8 +209,6 @@
             qrWarning.style.display = "none";
           }
         }
-      }, (error) => {
-        console.error("監視エラー:", error);
       });
     }
 
@@ -231,7 +239,6 @@
       }, 1000);
     }
 
-    // きのみをあげて強さを回復（updatedAtの時間を未来へずらすことで強さを戻す）
     function feedBerry() {
       let berries = parseInt(localStorage.getItem("myBerries")) || 0;
       if (berries <= 0) {
@@ -244,12 +251,10 @@
         return;
       }
 
-      // きのみを1つ消費
       berries--;
       localStorage.setItem("myBerries", berries);
       updateBerryUI();
 
-      // 強さを+1回復させるため、updatedAt（基準時間）を1分ぶん未来にずらす
       if (cachedUpdatedAt) {
         const newUpdatedAt = new Date(cachedUpdatedAt.getTime() + 60 * 1000);
         db.collection("gyms").doc(gymId).update({
