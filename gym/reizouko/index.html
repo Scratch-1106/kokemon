@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
@@ -19,14 +19,8 @@
     .team-yellow { border-color: #fbc531; }
     .team-neutral { border-color: #718093; }
 
-    /* スポットの写真スタイル */
     .spot-photo {
-      width: 100%;
-      height: 180px;
-      object-fit: cover;
-      border-radius: 10px;
-      border: 2px solid #718093;
-      margin-bottom: 15px;
+      width: 100%; height: 180px; object-fit: cover; border-radius: 10px; border: 2px solid #718093; margin-bottom: 15px;
     }
 
     button { background: #00a8ff; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; width: 100%; }
@@ -35,6 +29,7 @@
     #timer { font-size: 24px; color: #fbc531; margin: 15px 0; font-weight: bold; }
     #defenseTime, #gymStrength { font-size: 14px; color: #718093; margin-top: 5px; }
     .warning-msg { color: #ff6b6b; font-size: 14px; margin-top: 10px; font-weight: bold; }
+    #itemResult { font-size: 16px; color: #fbc531; margin-top: 10px; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -42,7 +37,6 @@
   <div id="header-container"></div>
 
   <div class="card" id="gymCard">
-    <!-- スポットの写真（同じフォルダに photo.jpg を置く場合） -->
     <img src="photo.jpg" alt="冷蔵庫ジムの写真" class="spot-photo" onerror="this.style.display='none'">
 
     <h1>⚔️ ジム: 冷蔵庫</h1>
@@ -56,6 +50,11 @@
     <button id="attackBtn" onclick="startBattle()">ジムに挑む</button>
     <button id="feedBtn" onclick="feedBerry()" style="background: #e056fd; display: none;">きのみをあげる (残り: <span id="berryNum">0</span>個)</button>
     
+    <!-- フォトディスクを回す機能（5分に1回） -->
+    <hr style="border: 0; border-top: 1px solid #718093; margin: 20px 0;">
+    <button id="spinBtn" onclick="spinGymDisc()" style="background: #e1b12c;">フォトディスクを回す</button>
+    <div id="itemResult"></div>
+
     <br><br>
     <a href="../../index.html" style="color: #808e9b; text-decoration: none;">← マップに戻る</a>
   </div>
@@ -96,6 +95,8 @@
     const strengthText = document.getElementById("gymStrength");
     const attackBtn = document.getElementById("attackBtn");
     const feedBtn = document.getElementById("feedBtn");
+    const spinBtn = document.getElementById("spinBtn");
+    const itemResult = document.getElementById("itemResult");
     const berryNumSpan = document.getElementById("berryNum");
     const timerDiv = document.getElementById("timer");
     const countdownSpan = document.getElementById("countdown");
@@ -111,6 +112,53 @@
     let cachedUpdatedAt = null;
     let defenseTimerInterval = null;
     let currentStrength = 60;
+
+    // 5分（300秒）のクールダウンタイマー処理
+    const COOLDOWN_TIME = 5 * 60 * 1000;
+    const gymSpinKey = "lastSpin_gym_" + gymId;
+
+    function checkSpinCooldown() {
+      if (!hasValidQR) {
+        spinBtn.disabled = true;
+        spinBtn.innerText = "QR未読込（回せない）";
+        return;
+      }
+
+      const lastSpin = parseInt(localStorage.getItem(gymSpinKey)) || 0;
+      const now = Date.now();
+      const diff = now - lastSpin;
+
+      if (diff < COOLDOWN_TIME) {
+        spinBtn.disabled = true;
+        const remainSec = Math.ceil((COOLDOWN_TIME - diff) / 1000);
+        const min = Math.floor(remainSec / 60);
+        const sec = remainSec % 60;
+        spinBtn.innerText = `補給完了 (${min}:${sec < 10 ? '0' : ''}${sec})`;
+      } else {
+        spinBtn.disabled = false;
+        spinBtn.innerText = "フォトディスクを回す";
+      }
+    }
+
+    setInterval(checkSpinCooldown, 1000);
+
+    function spinGymDisc() {
+      if (!hasValidQR) return;
+
+      const lastSpin = parseInt(localStorage.getItem(gymSpinKey)) || 0;
+      if (Date.now() - lastSpin < COOLDOWN_TIME) return;
+
+      localStorage.setItem(gymSpinKey, Date.now().toString());
+
+      const gotBerries = Math.floor(Math.random() * 3) + 1;
+      let currentBerries = parseInt(localStorage.getItem("myBerries")) || 0;
+      currentBerries += gotBerries;
+      localStorage.setItem("myBerries", currentBerries);
+
+      updateBerryUI();
+      itemResult.innerText = `🎁 きのみ を ${gotBerries}個 手に入れた！`;
+      checkSpinCooldown();
+    }
 
     function formatDefenseTime(totalSeconds) {
       if (totalSeconds < 0) return "0秒";
@@ -148,7 +196,6 @@
         const diffMinutes = Math.floor(diffSeconds / 60);
 
         defenseTimeText.innerText = `防衛時間: ${formatDefenseTime(diffSeconds)}`;
-
         currentStrength = Math.max(10, 60 - diffMinutes);
         strengthText.innerText = `ジムの強さ: ${currentStrength} / 60`;
       }, 1000);
@@ -278,6 +325,7 @@
     }
 
     watchGymStatus();
+    checkSpinCooldown();
   </script>
 
 </body>
