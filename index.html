@@ -106,7 +106,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
   <script>
-    // あなたのFirebase設定
+    // Firebase設定
     const firebaseConfig = {
       apiKey: "AIzaSyDQF-SGTV70zmFyS_Mquz_OVgn260X0Aqs",
       authDomain: "kokemon-go.firebaseapp.com",
@@ -135,10 +135,11 @@
     const imageOverlay = L.imageOverlay('map.jpeg', bounds).addTo(map);
     map.fitBounds(bounds);
 
+    // 🏟️ 冷蔵庫（ジム）※リンク先を指定のURLに変更しました
     const fridgeIcon = L.divIcon({
       className: 'custom-pin',
       html: `
-        <a href="gym.html?spot=fridge" style="text-decoration: none;">
+        <a href="https://kokeko.pages.dev/gym/reizouko" style="text-decoration: none;">
           <div class="gym-pin-container">
             <span class="gym-badge">⚔️</span>
             <img src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=150" alt="冷蔵庫">
@@ -151,6 +152,7 @@
     });
     L.marker([180, 200], { icon: fridgeIcon }).addTo(map);
 
+    // 🔵 自室（ポケストップ）
     const roomIcon = L.divIcon({
       className: 'custom-pin',
       html: `
