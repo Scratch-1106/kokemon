@@ -12,7 +12,6 @@
   <style>
     body { font-family: sans-serif; text-align: center; background: #1e272e; color: white; margin: 0; padding: 20px; }
     
-    /* ジムカード（チームの色によって枠線が変わる） */
     .card { 
       background: #2f3640; 
       border: 4px solid #718093; 
@@ -24,7 +23,6 @@
       transition: border-color 0.3s;
     }
 
-    /* チームごとの色 */
     .team-blue { border-color: #00a8ff; }
     .team-red { border-color: #e84118; }
     .team-yellow { border-color: #fbc531; }
@@ -35,6 +33,7 @@
     
     #timer { font-size: 24px; color: #fbc531; margin: 15px 0; font-weight: bold; }
     #defenseTime { font-size: 14px; color: #718093; margin-top: 5px; }
+    .warning-msg { color: #ff6b6b; font-size: 14px; margin-top: 10px; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -48,6 +47,9 @@
     <div id="defenseTime">防衛時間: -</div>
     
     <div id="timer" style="display: none;">残り時間: <span id="countdown">10</span>秒</div>
+    
+    <!-- QRコード認証メッセージが表示される場所 -->
+    <div id="qrWarning" class="warning-msg" style="display: none;">⚠️ 現地のQRコードからアクセスしてください</div>
     
     <button id="attackBtn" onclick="startBattle()">ジムに挑む</button>
     <br><br>
@@ -101,6 +103,7 @@
     const timerDiv = document.getElementById("timer");
     const countdownSpan = document.getElementById("countdown");
     const gymCard = document.getElementById("gymCard");
+    const qrWarning = document.getElementById("qrWarning");
 
     const myPlayerName = localStorage.getItem("myPlayerName") || "名無しプレイヤー";
     const myTeamColor = localStorage.getItem("myTeam") || "blue";
@@ -108,7 +111,11 @@
     let cachedUpdatedAt = null;
     let defenseTimerInterval = null;
 
-    // 秒数を「○日 ○時間 ○分 ○秒」の形に変換する関数
+    // URLのパラメータをチェックしてQRコード経由かどうかを判定する
+    // 例: gym/reizouko/index.html?qr=open のようにアクセスさせる
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasValidQR = urlParams.get("qr") === "open";
+
     function formatDefenseTime(totalSeconds) {
       if (totalSeconds < 0) return "0秒";
       
@@ -126,7 +133,6 @@
       return result;
     }
 
-    // 防衛時間をリアルタイムで更新するタイマー
     function startDefenseTimer() {
       if (defenseTimerInterval) clearInterval(defenseTimerInterval);
 
@@ -142,7 +148,6 @@
       }, 1000);
     }
 
-    // データベースの変更を常時監視して自動で画面を更新する（onSnapshotを使用）
     function watchGymStatus() {
       db.collection("gyms").doc(gymId).onSnapshot((doc) => {
         if (doc.exists) {
@@ -161,12 +166,19 @@
             defenseTimeText.innerText = "防衛時間: 0秒";
           }
 
-          if (owner === myPlayerName) {
+          // QRコードを通っていない場合は、ボタンを無効化して警告を表示する
+          if (!hasValidQR) {
+            attackBtn.innerText = "QR未読込（バトル不可）";
+            attackBtn.disabled = true;
+            qrWarning.style.display = "block";
+          } else if (owner === myPlayerName) {
             attackBtn.innerText = "自分のジムです（防衛中）";
             attackBtn.disabled = true;
+            qrWarning.style.display = "none";
           } else {
             attackBtn.innerText = "ジムに挑む";
             attackBtn.disabled = false;
+            qrWarning.style.display = "none";
           }
 
         } else {
@@ -174,16 +186,28 @@
           gymCard.className = "card team-neutral";
           defenseTimeText.innerText = "防衛時間: -";
           cachedUpdatedAt = null;
-          attackBtn.innerText = "ジムに挑む";
-          attackBtn.disabled = false;
+
+          if (!hasValidQR) {
+            attackBtn.innerText = "QR未読込（バトル不可）";
+            attackBtn.disabled = true;
+            qrWarning.style.display = "block";
+          } else {
+            attackBtn.innerText = "ジムに挑む";
+            attackBtn.disabled = false;
+            qrWarning.style.display = "none";
+          }
         }
       }, (error) => {
         console.error("監視エラー:", error);
       });
     }
 
-    // バトルの開始（放置タイマー）
     function startBattle() {
+      if (!hasValidQR) {
+        alert("現地にあるQRコードを読み込んでください！");
+        return;
+      }
+
       attackBtn.style.display = "none";
       timerDiv.style.display = "block";
       
@@ -204,20 +228,18 @@
       }, 1000);
     }
 
-    // Firebaseに新しいオーナーとチームを保存
     function saveGymOwner(newOwner, teamColor) {
       db.collection("gyms").doc(gymId).set({
         owner: newOwner,
         team: teamColor,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }).then(() => {
-        // 保存成功時は onSnapshot が自動で検知して画面を更新するため、処理はシンプルでOK
+        // 成功
       }).catch((error) => {
         alert("保存に失敗しました: " + error.message);
       });
     }
 
-    // 監視を開始
     watchGymStatus();
   </script>
 
