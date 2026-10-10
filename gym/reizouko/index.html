@@ -5,82 +5,63 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ジム：冷蔵庫</title>
   
-  <!-- Firebaseの読み込み -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
   <style>
     body { font-family: sans-serif; text-align: center; background: #1e272e; color: white; margin: 0; padding: 20px; }
-    
     .card { 
-      background: #2f3640; 
-      border: 4px solid #718093; 
-      border-radius: 15px; 
-      padding: 20px; 
-      max-width: 400px; 
-      margin: 0 auto; 
-      box-shadow: 0 8px 16px rgba(0,0,0,0.4); 
-      transition: border-color 0.3s;
+      background: #2f3640; border: 4px solid #718093; border-radius: 15px; padding: 20px; 
+      max-width: 400px; margin: 0 auto; box-shadow: 0 8px 16px rgba(0,0,0,0.4); transition: border-color 0.3s;
     }
-
     .team-blue { border-color: #00a8ff; }
     .team-red { border-color: #e84118; }
     .team-yellow { border-color: #fbc531; }
     .team-neutral { border-color: #718093; }
 
-    button { background: #00a8ff; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 15px; }
+    button { background: #00a8ff; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; width: 100%; }
     button:disabled { background: #57606f; cursor: not-allowed; }
     
     #timer { font-size: 24px; color: #fbc531; margin: 15px 0; font-weight: bold; }
-    #defenseTime { font-size: 14px; color: #718093; margin-top: 5px; }
+    #defenseTime, #gymStrength { font-size: 14px; color: #718093; margin-top: 5px; }
     .warning-msg { color: #ff6b6b; font-size: 14px; margin-top: 10px; font-weight: bold; }
   </style>
 </head>
 <body>
 
-  <!-- 共通ヘッダーが入る場所 -->
   <div id="header-container"></div>
 
-  <div class="card id-card" id="gymCard">
+  <div class="card" id="gymCard">
     <h1>⚔️ ジム: 冷蔵庫</h1>
     <p id="status">現在の状態: 読み込み中...</p>
     <div id="defenseTime">防衛時間: -</div>
+    <div id="gymStrength">ジムの強さ: - / 60</div>
     
     <div id="timer" style="display: none;">残り時間: <span id="countdown">10</span>秒</div>
-    
-    <!-- QRコード認証メッセージが表示される場所 -->
     <div id="qrWarning" class="warning-msg" style="display: none;">⚠️ 現地のQRコードからアクセスしてください</div>
     
     <button id="attackBtn" onclick="startBattle()">ジムに挑む</button>
+    <button id="feedBtn" onclick="feedBerry()" style="background: #e056fd; display: none;">きのみをあげる (残り: <span id="berryNum">0</span>個)</button>
+    
     <br><br>
     <a href="../../index.html" style="color: #808e9b; text-decoration: none;">← マップに戻る</a>
   </div>
 
   <script>
-    // 共通ヘッダーの読み込み
     fetch('../../header.html')
       .then(response => response.text())
       .then(data => {
         document.getElementById('header-container').innerHTML = data;
-
         const myName = localStorage.getItem("myPlayerName") || "名無しプレイヤー";
         const myTeam = localStorage.getItem("myTeam") || "blue";
 
         const nameSpan = document.getElementById("headerAccountName");
         if (nameSpan) nameSpan.innerText = myName;
-
         const teamSpan = document.getElementById("headerTeamName");
         if (teamSpan) {
-          if (myTeam === "blue") {
-            teamSpan.innerText = "青チーム";
-            teamSpan.style.color = "#00a8ff";
-          } else if (myTeam === "red") {
-            teamSpan.innerText = "赤チーム";
-            teamSpan.style.color = "#e84118";
-          } else if (myTeam === "yellow") {
-            teamSpan.innerText = "黄チーム";
-            teamSpan.style.color = "#fbc531";
-          }
+          if (myTeam === "blue") { teamSpan.innerText = "青チーム"; teamSpan.style.color = "#00a8ff"; }
+          else if (myTeam === "red") { teamSpan.innerText = "赤チーム"; teamSpan.style.color = "#e84118"; }
+          else if (myTeam === "yellow") { teamSpan.innerText = "黄チーム"; teamSpan.style.color = "#fbc531"; }
         }
       });
 
@@ -99,7 +80,10 @@
     const gymId = "reizouko";
     const statusText = document.getElementById("status");
     const defenseTimeText = document.getElementById("defenseTime");
+    const strengthText = document.getElementById("gymStrength");
     const attackBtn = document.getElementById("attackBtn");
+    const feedBtn = document.getElementById("feedBtn");
+    const berryNumSpan = document.getElementById("berryNum");
     const timerDiv = document.getElementById("timer");
     const countdownSpan = document.getElementById("countdown");
     const gymCard = document.getElementById("gymCard");
@@ -108,17 +92,15 @@
     const myPlayerName = localStorage.getItem("myPlayerName") || "名無しプレイヤー";
     const myTeamColor = localStorage.getItem("myTeam") || "blue";
 
-    let cachedUpdatedAt = null;
-    let defenseTimerInterval = null;
-
-    // URLのパラメータをチェックしてQRコード経由かどうかを判定する
-    // 例: gym/reizouko/index.html?qr=open のようにアクセスさせる
     const urlParams = new URLSearchParams(window.location.search);
     const hasValidQR = urlParams.get("qr") === "open";
 
+    let cachedUpdatedAt = null;
+    let defenseTimerInterval = null;
+    let currentStrength = 60;
+
     function formatDefenseTime(totalSeconds) {
       if (totalSeconds < 0) return "0秒";
-      
       const days = Math.floor(totalSeconds / (3600 * 24));
       const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600);
       const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -129,22 +111,35 @@
       if (days > 0 || hours > 0) result += `${hours}時間 `;
       if (days > 0 || hours > 0 || minutes > 0) result += `${minutes}分 `;
       result += `${seconds}秒`;
-
       return result;
+    }
+
+    // きのみの所持数を画面に反映
+    function updateBerryUI() {
+      const berries = parseInt(localStorage.getItem("myBerries")) || 0;
+      berryNumSpan.innerText = berries;
     }
 
     function startDefenseTimer() {
       if (defenseTimerInterval) clearInterval(defenseTimerInterval);
 
       defenseTimerInterval = setInterval(() => {
+        updateBerryUI();
         if (!cachedUpdatedAt) {
           defenseTimeText.innerText = "防衛時間: -";
+          strengthText.innerText = "ジムの強さ: - / 60";
           return;
         }
 
         const now = new Date();
         const diffSeconds = Math.floor((now - cachedUpdatedAt) / 1000);
+        const diffMinutes = Math.floor(diffSeconds / 60);
+
         defenseTimeText.innerText = `防衛時間: ${formatDefenseTime(diffSeconds)}`;
+
+        // 強さ計算：最大60、1分ごとに-1、最低10
+        currentStrength = Math.max(10, 60 - diffMinutes);
+        strengthText.innerText = `ジムの強さ: ${currentStrength} / 60`;
       }, 1000);
     }
 
@@ -164,36 +159,43 @@
           } else {
             cachedUpdatedAt = null;
             defenseTimeText.innerText = "防衛時間: 0秒";
+            strengthText.innerText = "ジムの強さ: 60 / 60";
           }
 
-          // QRコードを通っていない場合は、ボタンを無効化して警告を表示する
           if (!hasValidQR) {
             attackBtn.innerText = "QR未読込（バトル不可）";
             attackBtn.disabled = true;
+            feedBtn.style.display = "none";
             qrWarning.style.display = "block";
-          } else if (owner === myPlayerName) {
-            attackBtn.innerText = "自分のジムです（防衛中）";
-            attackBtn.disabled = true;
-            qrWarning.style.display = "none";
           } else {
-            attackBtn.innerText = "ジムに挑む";
-            attackBtn.disabled = false;
             qrWarning.style.display = "none";
+            if (owner === myPlayerName) {
+              attackBtn.innerText = "自分のジムです（防衛中）";
+              attackBtn.disabled = true;
+              feedBtn.style.display = "block"; // 自分のジムならきのみをあげられる
+            } else {
+              attackBtn.innerText = "ジムに挑む";
+              attackBtn.disabled = false;
+              feedBtn.style.display = "none";
+            }
           }
 
         } else {
           statusText.innerText = "現在のオーナー: なし（中立）";
           gymCard.className = "card team-neutral";
           defenseTimeText.innerText = "防衛時間: -";
+          strengthText.innerText = "ジムの強さ: - / 60";
           cachedUpdatedAt = null;
 
           if (!hasValidQR) {
             attackBtn.innerText = "QR未読込（バトル不可）";
             attackBtn.disabled = true;
+            feedBtn.style.display = "none";
             qrWarning.style.display = "block";
           } else {
             attackBtn.innerText = "ジムに挑む";
             attackBtn.disabled = false;
+            feedBtn.style.display = "none";
             qrWarning.style.display = "none";
           }
         }
@@ -209,6 +211,7 @@
       }
 
       attackBtn.style.display = "none";
+      feedBtn.style.display = "none";
       timerDiv.style.display = "block";
       
       let timeLeft = 10;
@@ -228,13 +231,42 @@
       }, 1000);
     }
 
+    // きのみをあげて強さを回復（updatedAtの時間を未来へずらすことで強さを戻す）
+    function feedBerry() {
+      let berries = parseInt(localStorage.getItem("myBerries")) || 0;
+      if (berries <= 0) {
+        alert("きのみを持っていません！ポケストップで集めましょう。");
+        return;
+      }
+
+      if (currentStrength >= 60) {
+        alert("ジムの強さはすでに最大です！");
+        return;
+      }
+
+      // きのみを1つ消費
+      berries--;
+      localStorage.setItem("myBerries", berries);
+      updateBerryUI();
+
+      // 強さを+1回復させるため、updatedAt（基準時間）を1分ぶん未来にずらす
+      if (cachedUpdatedAt) {
+        const newUpdatedAt = new Date(cachedUpdatedAt.getTime() + 60 * 1000);
+        db.collection("gyms").doc(gymId).update({
+          updatedAt: firebase.firestore.Timestamp.fromDate(newUpdatedAt)
+        }).then(() => {
+          alert("きのみをあげて、ジムの強さが1回復した！");
+        });
+      }
+    }
+
     function saveGymOwner(newOwner, teamColor) {
       db.collection("gyms").doc(gymId).set({
         owner: newOwner,
         team: teamColor,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }).then(() => {
-        // 成功
+        alert("ジムを制圧しました！");
       }).catch((error) => {
         alert("保存に失敗しました: " + error.message);
       });
