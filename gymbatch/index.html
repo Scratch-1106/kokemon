@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ジムバッチ - おうちポケGO</title>
   
-  <!-- Firebaseの読み込み -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
@@ -15,8 +14,7 @@
     h1 { text-align: center; }
     p { margin: 8px 0; }
     
-    /* バッチのランクごとのデザイン */
-    .badge-container { display: flex; align-items: center; justify-content: space-between; background: #1e272e; padding: 15px; border-radius: 10px; margin-top: 15px; border: 3px solid #718093; transition: border-color 0.3s; }
+    .badge-container { display: flex; align-items: center; justify-content: space-between; background: #1e272e; padding: 15px; border-radius: 10px; margin-top: 15px; border: 3px solid #718093; transition: all 0.3s; }
     .badge-normal { border-color: #718093; }
     .badge-bronze { border-color: #cd7f32; }
     .badge-silver { border-color: #c0c0c0; }
@@ -34,20 +32,18 @@
 </head>
 <body>
 
-  <!-- 共通ヘッダーが入る場所 -->
   <div id="header-container"></div>
 
   <div class="card">
     <h1>🏅 ジムバッチ一覧</h1>
-    <p>ジムの制圧や防衛時間に応じてバッチがランクアップします！</p>
-    <p style="font-size: 13px; color: #718093;">（制圧: +100pt / 防衛: 1分につき+1pt）</p>
+    <p>ジムを防衛している間、バッチがランクアップします！</p>
+    <p style="font-size: 13px; color: #718093;">（防衛成功時: +100pt / 防衛: 1分につき+1pt）</p>
 
-    <!-- 冷蔵庫ジムのバッチ -->
     <div id="badgeCard" class="badge-container badge-normal">
       <div class="badge-icon" id="badgeIcon">🛡️</div>
       <div class="badge-info">
         <div class="badge-title">冷蔵庫</div>
-        <div class="badge-rank" id="badgeRank">ランク: ノーマル</div>
+        <div class="badge-rank" id="badgeRank">ランク: 未獲得</div>
         <div style="font-size: 13px; color: #a4b0be;" id="badgePoints">ポイント: 0 pt</div>
         <div class="progress-bar">
           <div class="progress-fill" id="progressFill"></div>
@@ -59,139 +55,18 @@
   </div>
 
   <script>
-    // 共通ヘッダーの読み込み
     fetch('../header.html')
       .then(response => response.text())
       .then(data => {
         document.getElementById('header-container').innerHTML = data;
-
         const myName = localStorage.getItem("myPlayerName") || "名無しプレイヤー";
         const myTeam = localStorage.getItem("myTeam") || "blue";
 
         const nameSpan = document.getElementById("headerAccountName");
         if (nameSpan) nameSpan.innerText = myName;
-
         const teamSpan = document.getElementById("headerTeamName");
         if (teamSpan) {
-          if (myTeam === "blue") {
-            teamSpan.innerText = "青チーム";
-            teamSpan.style.color = "#00a8ff";
-          } else if (myTeam === "red") {
-            teamSpan.innerText = "赤チーム";
-            teamSpan.style.color = "#e84118";
-          } else if (myTeam === "yellow") {
-            teamSpan.innerText = "黄チーム";
-            teamSpan.style.color = "#fbc531";
-          }
+          if (myTeam === "blue") { teamSpan.innerText = "青チーム"; teamSpan.style.color = "#00a8ff"; }
+          else if (myTeam === "red") { teamSpan.innerText = "赤チーム"; teamSpan.style.color = "#e84118"; }
+          else if (myTeam === "yellow") { teamSpan.innerText = "黄チーム"; teamSpan.style.color = "#fbc531"; }
         }
-      });
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyDQF-SGTV70zmFyS_Mquz_OVgn260X0Aqs",
-      authDomain: "kokemon-go.firebaseapp.com",
-      projectId: "kokemon-go",
-      storageBucket: "kokemon-go.firebasestorage.app",
-      messagingSenderId: "391436988134",
-      appId: "1:391436988134:web:2a80a98886d1a251211527"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
-    const myPlayerName = localStorage.getItem("myPlayerName") || "名無しプレイヤー";
-    const gymId = "reizouko";
-
-    const THRESHOLDS = {
-      bronze: 1000,
-      silver: 7200,
-      gold: 28800
-    };
-
-    const badgeCard = document.getElementById("badgeCard");
-    const badgeRank = document.getElementById("badgeRank");
-    const badgePoints = document.getElementById("badgePoints");
-    const progressFill = document.getElementById("progressFill");
-
-    let cachedUpdatedAt = null;
-    let isOwner = false;
-    let pointsInterval = null;
-
-    // 画面上のUIを更新する関数
-    function renderBadge(points) {
-      badgePoints.innerText = `ポイント: ${points.toLocaleString()} pt`;
-
-      let rankName = "ノーマル";
-      let rankClass = "badge-normal";
-      let progressPercent = 0;
-
-      if (points >= THRESHOLDS.gold) {
-        rankName = "金 (ゴールド)";
-        rankClass = "badge-gold";
-        progressPercent = 100;
-      } else if (points >= THRESHOLDS.silver) {
-        rankName = "銀 (シルバー)";
-        rankClass = "badge-silver";
-        progressPercent = ((points - THRESHOLDS.silver) / (THRESHOLDS.gold - THRESHOLDS.silver)) * 100;
-      } else if (points >= THRESHOLDS.bronze) {
-        rankName = "銅 (ブロンズ)";
-        rankClass = "badge-bronze";
-        progressPercent = ((points - THRESHOLDS.bronze) / (THRESHOLDS.silver - THRESHOLDS.bronze)) * 100;
-      } else {
-        rankName = "ノーマル";
-        rankClass = "badge-normal";
-        progressPercent = (points / THRESHOLDS.bronze) * 100;
-      }
-
-      badgeCard.className = "badge-container " + rankClass;
-      badgeRank.innerText = `ランク: ${rankName}`;
-      progressFill.style.width = Math.min(100, Math.max(0, progressPercent)) + "%";
-    }
-
-    // 毎秒ポイントを再計算してリアルタイムに反映するタイマー
-    function startPointsTimer() {
-      if (pointsInterval) clearInterval(pointsInterval);
-
-      pointsInterval = setInterval(() => {
-        let totalPoints = 0;
-        if (isOwner && cachedUpdatedAt) {
-          const now = new Date();
-          const diffMinutes = Math.floor((now - cachedUpdatedAt) / (1000 * 60));
-          totalPoints = 100 + Math.max(0, diffMinutes);
-        }
-        renderBadge(totalPoints);
-      }, 1000);
-    }
-
-    // Firestoreの変更をリアルタイムで監視 (onSnapshot)
-    db.collection("gyms").doc(gymId).onSnapshot((doc) => {
-      if (doc.exists) {
-        const data = doc.data();
-        const owner = data.owner;
-
-        if (owner === myPlayerName && data.updatedAt) {
-          isOwner = true;
-          cachedUpdatedAt = data.updatedAt.toDate();
-        } else {
-          isOwner = false;
-          cachedUpdatedAt = null;
-        }
-      } else {
-        isOwner = false;
-        cachedUpdatedAt = null;
-      }
-
-      // 即時反映とタイマー開始
-      let initialPoints = 0;
-      if (isOwner && cachedUpdatedAt) {
-        const diffMinutes = Math.floor((new Date() - cachedUpdatedAt) / (1000 * 60));
-        initialPoints = 100 + Math.max(0, diffMinutes);
-      }
-      renderBadge(initialPoints);
-      startPointsTimer();
-    }, (error) => {
-      console.error("監視エラー:", error);
-    });
-  </script>
-
-</body>
-</html>
