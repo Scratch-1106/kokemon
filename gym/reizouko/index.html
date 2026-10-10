@@ -11,15 +11,34 @@
 
   <style>
     body { font-family: sans-serif; text-align: center; background: #1e272e; color: white; margin: 0; padding: 20px; }
-    .card { background: #2f3640; border: 3px solid #718093; border-radius: 15px; padding: 20px; max-width: 400px; margin: 0 auto; box-shadow: 0 8px 16px rgba(0,0,0,0.4); }
+    
+    /* ジムカード（チームの色によって枠線が変わる） */
+    .card { 
+      background: #2f3640; 
+      border: 4px solid #718093; 
+      border-radius: 15px; 
+      padding: 20px; 
+      max-width: 400px; 
+      margin: 0 auto; 
+      box-shadow: 0 8px 16px rgba(0,0,0,0.4); 
+      transition: border-color 0.3s;
+    }
+
+    /* チームごとの色（例: 青チーム、赤チーム、黄チーム、中立） */
+    .team-blue { border-color: #00a8ff; }
+    .team-red { border-color: #e84118; }
+    .team-yellow { border-color: #fbc531; }
+    .team-neutral { border-color: #718093; }
+
     button { background: #00a8ff; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 15px; }
-    button:active { background: #0097e6; }
+    button:disabled { background: #57606f; cursor: not-allowed; }
+    
     #timer { font-size: 24px; color: #fbc531; margin: 15px 0; font-weight: bold; }
   </style>
 </head>
 <body>
 
-  <div class="card">
+  <div class="card id-card" id="gymCard">
     <h1>⚔️ ジム: 冷蔵庫</h1>
     <p id="status">現在の状態: 読み込み中...</p>
     
@@ -31,7 +50,6 @@
   </div>
 
   <script>
-    // Firebase設定（メイン画面と同じものを設定）
     const firebaseConfig = {
       apiKey: "AIzaSyDQF-SGTV70zmFyS_Mquz_OVgn260X0Aqs",
       authDomain: "kokemon-go.firebaseapp.com",
@@ -49,15 +67,39 @@
     const attackBtn = document.getElementById("attackBtn");
     const timerDiv = document.getElementById("timer");
     const countdownSpan = document.getElementById("countdown");
+    const gymCard = document.getElementById("gymCard");
+
+    // 自分のプレイヤーID（ブラウザごとに簡易的に固定、または「自分」とする）
+    // 本来はログイン機能をつけるけど、まずは簡易的に「自分」を識別するよ
+    const myPlayerName = "自分"; 
 
     // データベースから現在のジムの状態を読み込む
     function loadGymStatus() {
       db.collection("gyms").doc(gymId).get().then((doc) => {
         if (doc.exists) {
           const data = doc.data();
-          statusText.innerText = `現在のオーナー: ${data.owner || "なし"}`;
+          const owner = data.owner || "なし";
+          const team = data.team || "neutral"; // blue, red, yellow, neutral
+
+          statusText.innerText = `現在のオーナー: ${owner}`;
+
+          // チームの色をカードに反映
+          gymCard.className = "card team-" + team;
+
+          // もし自分がすでに持っているジムなら、攻撃ボタンを押せないようにする
+          if (owner === myPlayerName) {
+            attackBtn.innerText = "自分のジムです（防衛中）";
+            attackBtn.disabled = true;
+          } else {
+            attackBtn.innerText = "ジムに挑む";
+            attackBtn.disabled = false;
+          }
+
         } else {
           statusText.innerText = "現在のオーナー: なし（中立）";
+          gymCard.className = "card team-neutral";
+          attackBtn.innerText = "ジムに挑む";
+          attackBtn.disabled = false;
         }
       }).catch((error) => {
         console.error("読み込みエラー:", error);
@@ -69,7 +111,7 @@
       attackBtn.style.display = "none";
       timerDiv.style.display = "block";
       
-      let timeLeft = 10; // 攻略にかかる秒数（例として10秒）
+      let timeLeft = 10; // 攻略秒数
       countdownSpan.innerText = timeLeft;
 
       const timer = setInterval(() => {
@@ -81,16 +123,17 @@
           timerDiv.style.display = "none";
           attackBtn.style.display = "block";
           
-          // 勝利したのでFirebaseに保存
-          saveGymOwner("あなた");
+          // 勝利したのでFirebaseに保存（チームは例として青チーム「blue」にするよ）
+          saveGymOwner(myPlayerName, "blue");
         }
       }, 1000);
     }
 
-    // Firebaseに新しいオーナーを保存
-    function saveGymOwner(newOwner) {
+    // Firebaseに新しいオーナーとチームを保存
+    function saveGymOwner(newOwner, teamColor) {
       db.collection("gyms").doc(gymId).set({
         owner: newOwner,
+        team: teamColor,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }).then(() => {
         alert("ジムを制圧しました！");
@@ -100,7 +143,6 @@
       });
     }
 
-    // ページを開いたときに状態をロード
     loadGymStatus();
   </script>
 
