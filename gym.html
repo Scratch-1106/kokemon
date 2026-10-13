@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ジム</title>
-
+  
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
@@ -96,9 +96,10 @@
     const gymId = urlParams.get("id") || "reizouko";
     const hasValidQR = urlParams.get("qr") === "open";
 
+    // ★ ブラウザバック対策：URLを綺麗に整える
     if (hasValidQR) {
-      const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + "?id=" + gymId;
-      window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
+      const cleanUrl = window.location.pathname + "?id=" + gymId;
+      window.history.replaceState(null, '', cleanUrl);
     }
 
     // spots.js から該当するジムの情報を自動反映！
@@ -294,7 +295,7 @@
 
     function startBattle() {
       if (!hasValidQR) {
-        alert("現地にあるQRコードを読み込んでください!");
+        alert("現地にあるQRコードを読み込んでください！");
         return;
       }
 
