@@ -106,8 +106,15 @@
     const myPlayerName = localStorage.getItem("myPlayerName") || "名無しプレイヤー";
     const myTeamColor = localStorage.getItem("myTeam") || "blue";
 
+    // URLパラメータのチェックとブラウザバック対策
     const urlParams = new URLSearchParams(window.location.search);
     const hasValidQR = urlParams.get("qr") === "open";
+
+    // ★ 判定後すぐにURLから ?qr=open を消去（ブラウザバックしてもQR未読込になる）
+    if (hasValidQR) {
+      const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+      window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
+    }
 
     let cachedUpdatedAt = null;
     let cachedFedBonus = 0;
@@ -180,7 +187,6 @@
       berryNumSpan.innerText = berries;
     }
 
-    // ★ 修正後の強さ計算処理
     function updateGymStats() {
       updateBerryUI();
 
@@ -197,10 +203,7 @@
 
       defenseTimeText.innerText = `防衛時間: ${formatDefenseTime(diffSeconds)}`;
 
-      // 減退した強さ（上限60から、経過分数を引く。ただし最低10まで）
       const decayedStrength = Math.max(10, 60 - diffMinutes);
-
-      // きのみ回復分（fedBonus）を足し算し、最大60に制限する
       currentStrength = Math.min(60, decayedStrength + cachedFedBonus);
       strengthText.innerText = `ジムの強さ: ${currentStrength} / 60`;
     }
