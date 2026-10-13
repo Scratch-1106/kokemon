@@ -10,7 +10,18 @@
     .card { background: #2f3640; border: 4px solid #00a8ff; border-radius: 15px; padding: 20px; max-width: 400px; margin: 0 auto; box-shadow: 0 8px 16px rgba(0,0,0,0.4); }
     
     .spot-photo {
-      width: 100%; height: 180px; object-fit: cover; border-radius: 10px; border: 2px solid #00a8ff; margin-bottom: 15px;
+      width: 100%; height: 180px; object-fit: cover; border-radius: 10px; border: 2px solid #00a8ff; margin-bottom: 10px;
+    }
+
+    #stopDesc {
+      font-size: 13px;
+      color: #a4b0be;
+      background: #1e272e;
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      text-align: left;
+      border-left: 3px solid #00a8ff;
     }
 
     button { background: #00a8ff; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 15px; width: 100%; }
@@ -24,9 +35,11 @@
   <div id="header-container"></div>
 
   <div class="card">
-    <img src="photo.jpg" alt="ポケストップの写真" class="spot-photo" onerror="this.style.display='none'">
+    <img id="stopPhoto" src="" alt="ポケストップの写真" class="spot-photo" onerror="this.style.display='none'">
 
-    <h1>🌀 ポケストップ</h1>
+    <div id="stopDesc">スポットの説明文を読み込んでいます...</div>
+
+    <h1 id="stopTitle">🌀 ポケストップ</h1>
     <p>フォトディスクを回して「きのみ」を手に入れよう！</p>
     <p id="berryCount" style="color: #ff7675; font-weight: bold;"></p>
     
@@ -35,11 +48,14 @@
     
     <button id="spinBtn" onclick="spinPokestop()">フォトディスクを回す</button>
     <br><br>
-    <a href="../../index.html" style="color: #808e9b; text-decoration: none;">← マップに戻る</a>
+    <a href="index.html" style="color: #808e9b; text-decoration: none;">← マップに戻る</a>
   </div>
 
+  <!-- 一元管理データを読み込む -->
+  <script src="spots.js"></script>
+
   <script>
-    fetch('../../header.html')
+    fetch('header.html')
       .then(response => response.text())
       .then(data => {
         document.getElementById('header-container').innerHTML = data;
@@ -57,16 +73,27 @@
       });
 
     const urlParams = new URLSearchParams(window.location.search);
+    const stopId = urlParams.get("id") || "玄関";
     const hasValidQR = urlParams.get("qr") === "open";
+
+    if (hasValidQR) {
+      const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + "?id=" + stopId;
+      window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
+    }
+
+    // spots.js からデータを自動取得して画面に反映！
+    const stopInfo = SPOT_DATA[stopId] || { name: stopId, desc: "説明文がありません。", photo: "photo.jpg" };
+    document.getElementById("stopTitle").innerText = `🌀 ${stopInfo.name}`;
+    document.getElementById("stopPhoto").src = stopInfo.photo;
+    document.getElementById("stopDesc").innerText = stopInfo.desc;
 
     const spinBtn = document.getElementById("spinBtn");
     const qrWarning = document.getElementById("qrWarning");
     const itemResult = document.getElementById("itemResult");
     const berryCountText = document.getElementById("berryCount");
 
-    // ポケストップごとの識別キー（必要に応じて 'stop_reizouko' などに変更可能）
-    const stopKey = "lastSpin_pokestop_default";
-    const COOLDOWN_TIME = 5 * 60 * 1000; // 5分
+    const stopKey = "lastSpin_pokestop_" + stopId; // スポットごとに個別クールダウン
+    const COOLDOWN_TIME = 5 * 60 * 1000;
 
     function updateBerryDisplay() {
       const berries = parseInt(localStorage.getItem("myBerries")) || 0;
