@@ -150,10 +150,17 @@
     L.imageOverlay('map.jpeg', bounds).addTo(map);
     map.fitBounds(bounds);
 
-    // SPOT_DATA から自動でピンをマップ上に生成！
+    // SPOT_DATA の x, y (%) をマップ上の座標に変換してピンを生成
     for (const [id, spot] of Object.entries(SPOT_DATA)) {
       let icon;
       let targetUrl;
+
+      // 画像のサイズ（imageHeight, imageWidth）を基準に、x% と y% から Leaflet 用の座標 [Y, X] を計算
+      const lat = imageHeight * (1 - spot.y / 100);
+      const lng = imageWidth * (spot.x / 100);
+
+      // アイコン画像がない場合のフォールバック（spots.jsにiconUrlがないためphotoを使用、またはデフォルト画像）
+      const spotImg = spot.photo || "photo.jpg";
 
       if (spot.type === "gym") {
         targetUrl = `gym?id=${id}&qr=open`;
@@ -163,7 +170,7 @@
             <a href="${targetUrl}" style="text-decoration: none;">
               <div class="gym-pin-container">
                 <span class="gym-badge">⚔️</span>
-                <img src="${spot.iconUrl}" alt="${spot.name}">
+                <img src="${spotImg}" alt="${spot.name}" onerror="this.src='photo.jpg'">
               </div>
               <div class="custom-label">${spot.name}</div>
             </a>
@@ -178,7 +185,7 @@
           html: `
             <a href="${targetUrl}" style="text-decoration: none;">
               <div class="stop-pin-container">
-                <img src="${spot.iconUrl}" alt="${spot.name}">
+                <img src="${spotImg}" alt="${spot.name}" onerror="this.src='photo.jpg'">
               </div>
               <div class="custom-label">${spot.name}</div>
             </a>
@@ -188,11 +195,7 @@
         });
       }
 
-      // latlng または coords のどちらであっても正しく読み込めるように安全に対応
-      const spotCoords = spot.latlng || spot.coords;
-      if (spotCoords) {
-        L.marker(spotCoords, { icon: icon }).addTo(map);
-      }
+      L.marker([lat, lng], { icon: icon }).addTo(map);
     }
   </script>
 
