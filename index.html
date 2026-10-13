@@ -155,7 +155,6 @@
       let icon;
       let targetUrl;
 
-      // 拡張子なしのURL（gym?id=... / pokestop?id=...）に統一
       if (spot.type === "gym") {
         targetUrl = `gym?id=${id}&qr=open`;
         icon = L.divIcon({
@@ -189,8 +188,10 @@
         });
       }
 
-      if (spot.latlng) {
-        L.marker(spot.latlng, { icon: icon }).addTo(map);
+      // latlng または coords のどちらであっても正しく読み込めるように安全に対応
+      const spotCoords = spot.latlng || spot.coords;
+      if (spotCoords) {
+        L.marker(spotCoords, { icon: icon }).addTo(map);
       }
     }
   </script>
