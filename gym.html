@@ -93,10 +93,16 @@
       });
 
     const urlParams = new URLSearchParams(window.location.search);
-    const gymId = urlParams.get("id") || "reizouko";
+    let gymId = urlParams.get("id") || "reizouko";
+    
+    // 余計なスラッシュやクエリが混ざっていたら手前で安全にカットする
+    if (gymId.includes("/")) {
+      gymId = gymId.split("/")[0];
+    }
+
     const hasValidQR = urlParams.get("qr") === "open";
 
-    // ★ ブラウザバック対策：URLを綺麗に整える
+    // ブラウザバック対策：URLを綺麗に整える
     if (hasValidQR) {
       const cleanUrl = window.location.pathname + "?id=" + gymId;
       window.history.replaceState(null, '', cleanUrl);
