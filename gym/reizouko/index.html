@@ -180,28 +180,36 @@
       berryNumSpan.innerText = berries;
     }
 
+    // ★ 現在の「防衛時間」と「強さ」を再計算して表示を更新する関数
+    function updateGymStats() {
+      updateBerryUI();
+
+      if (!cachedUpdatedAt) {
+        defenseTimeText.innerText = "防衛時間: -";
+        strengthText.innerText = "ジムの強さ: - / 60";
+        currentStrength = 60;
+        return;
+      }
+
+      const now = new Date();
+      const diffSeconds = Math.floor((now - cachedUpdatedAt) / 1000);
+      const diffMinutes = Math.floor(diffSeconds / 60);
+
+      // 防衛時間の更新（減らない）
+      defenseTimeText.innerText = `防衛時間: ${formatDefenseTime(diffSeconds)}`;
+
+      // 強さの計算：基本(60 - 経過分数) + きのみ回復(cachedFedBonus)
+      const baseStrength = 60 - diffMinutes;
+      const calculatedStrength = baseStrength + cachedFedBonus;
+
+      // 最大60、最低10に収める
+      currentStrength = Math.min(60, Math.max(10, calculatedStrength));
+      strengthText.innerText = `ジムの強さ: ${currentStrength} / 60`;
+    }
+
     function startDefenseTimer() {
       if (defenseTimerInterval) clearInterval(defenseTimerInterval);
-
-      defenseTimerInterval = setInterval(() => {
-        updateBerryUI();
-        if (!cachedUpdatedAt) {
-          defenseTimeText.innerText = "防衛時間: -";
-          strengthText.innerText = "ジムの強さ: - / 60";
-          currentStrength = 60;
-          return;
-        }
-
-        const now = new Date();
-        const diffSeconds = Math.floor((now - cachedUpdatedAt) / 1000);
-        const diffMinutes = Math.floor(diffSeconds / 60);
-
-        defenseTimeText.innerText = `防衛時間: ${formatDefenseTime(diffSeconds)}`;
-        
-        const calculatedStrength = 60 - diffMinutes + cachedFedBonus;
-        currentStrength = Math.min(60, Math.max(10, calculatedStrength));
-        strengthText.innerText = `ジムの強さ: ${currentStrength} / 60`;
-      }, 1000);
+      defenseTimerInterval = setInterval(updateGymStats, 1000);
     }
 
     function watchGymStatus() {
@@ -214,16 +222,16 @@
           statusText.innerText = `現在のオーナー: ${owner}`;
           gymCard.className = "card team-" + team;
 
+          // ★ Firestoreの最新のきのみボーナス（fedBonus）を取得
           cachedFedBonus = data.fedBonus || 0;
 
           if (data.updatedAt) {
             cachedUpdatedAt = data.updatedAt.toDate();
+            updateGymStats();
             startDefenseTimer();
           } else {
             cachedUpdatedAt = null;
-            defenseTimeText.innerText = "防衛時間: 0秒";
-            strengthText.innerText = "ジムの強さ: 60 / 60";
-            currentStrength = 60;
+            updateGymStats();
           }
 
           if (!hasValidQR) {
@@ -246,11 +254,9 @@
 
         } else {
           statusText.innerText = "現在のオーナー: なし（中立）";
-          defenseTimeText.innerText = "防衛時間: -";
-          strengthText.innerText = "ジムの強さ: - / 60";
           cachedUpdatedAt = null;
           cachedFedBonus = 0;
-          currentStrength = 60;
+          updateGymStats();
 
           if (!hasValidQR) {
             attackBtn.innerText = "QR未読込（バトル不可）";
@@ -267,7 +273,6 @@
       });
     }
 
-    // ジムの強さと同じ秒数だけバトルタイマーを動かす
     function startBattle() {
       if (!hasValidQR) {
         alert("現地にあるQRコードを読み込んでください！");
@@ -279,7 +284,6 @@
       spinBtn.style.display = "none";
       timerDiv.style.display = "block";
       
-      // 現在のジムの強さ（10〜60）をそのままバトル所要時間（秒）として設定
       let timeLeft = currentStrength;
       countdownSpan.innerText = timeLeft;
 
@@ -298,6 +302,7 @@
       }, 1000);
     }
 
+    // ★ きのみをあげる処理
     function feedBerry() {
       let berries = parseInt(localStorage.getItem("myBerries")) || 0;
       if (berries <= 0) {
@@ -314,16 +319,16 @@
       localStorage.setItem("myBerries", berries);
       updateBerryUI();
 
+      // Firestore の fedBonus を 1 増やす（onSnapshot で自動検知されて強さが1回復）
       db.collection("gyms").doc(gymId).update({
         fedBonus: firebase.firestore.FieldValue.increment(1)
       }).then(() => {
-        alert("きのみをあげて、ジムの強さが1回復した！");
+        // 成功
       }).catch((error) => {
         alert("きのみをあげるのに失敗しました: " + error.message);
       });
     }
 
-    // ジムを倒して制圧した際、オーナー変更とともに日時と fedBonus を初期化
     function saveGymOwner(newOwner, teamColor) {
       db.collection("gyms").doc(gymId).set({
         owner: newOwner,
