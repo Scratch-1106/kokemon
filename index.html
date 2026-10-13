@@ -96,7 +96,7 @@
 <div id="header-container"></div>
 
 <script>
-  fetch('/header.html')
+  fetch('header.html')
     .then(response => response.text())
     .then(data => {
       document.getElementById('header-container').innerHTML = data;
@@ -155,8 +155,9 @@
       let icon;
       let targetUrl;
 
+      // 拡張子なしのURL（gym?id=... / pokestop?id=...）に統一
       if (spot.type === "gym") {
-        targetUrl = `gym.html?id=${id}`;
+        targetUrl = `gym?id=${id}&qr=open`;
         icon = L.divIcon({
           className: 'custom-pin',
           html: `
@@ -172,7 +173,7 @@
           iconAnchor: [30, 40]
         });
       } else {
-        targetUrl = `pokestop.html?id=${id}`;
+        targetUrl = `pokestop?id=${id}&qr=open`;
         icon = L.divIcon({
           className: 'custom-pin',
           html: `
@@ -188,7 +189,9 @@
         });
       }
 
-      L.marker(spot.latlng, { icon: icon }).addTo(map);
+      if (spot.latlng) {
+        L.marker(spot.latlng, { icon: icon }).addTo(map);
+      }
     }
   </script>
 
