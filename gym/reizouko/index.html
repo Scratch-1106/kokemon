@@ -180,7 +180,6 @@
       berryNumSpan.innerText = berries;
     }
 
-    // ★ 現在の「防衛時間」と「強さ」を再計算して表示を更新する関数
     function updateGymStats() {
       updateBerryUI();
 
@@ -195,14 +194,11 @@
       const diffSeconds = Math.floor((now - cachedUpdatedAt) / 1000);
       const diffMinutes = Math.floor(diffSeconds / 60);
 
-      // 防衛時間の更新（減らない）
       defenseTimeText.innerText = `防衛時間: ${formatDefenseTime(diffSeconds)}`;
 
-      // 強さの計算：基本(60 - 経過分数) + きのみ回復(cachedFedBonus)
       const baseStrength = 60 - diffMinutes;
       const calculatedStrength = baseStrength + cachedFedBonus;
 
-      // 最大60、最低10に収める
       currentStrength = Math.min(60, Math.max(10, calculatedStrength));
       strengthText.innerText = `ジムの強さ: ${currentStrength} / 60`;
     }
@@ -222,7 +218,6 @@
           statusText.innerText = `現在のオーナー: ${owner}`;
           gymCard.className = "card team-" + team;
 
-          // ★ Firestoreの最新のきのみボーナス（fedBonus）を取得
           cachedFedBonus = data.fedBonus || 0;
 
           if (data.updatedAt) {
@@ -302,7 +297,6 @@
       }, 1000);
     }
 
-    // ★ きのみをあげる処理
     function feedBerry() {
       let berries = parseInt(localStorage.getItem("myBerries")) || 0;
       if (berries <= 0) {
@@ -319,12 +313,14 @@
       localStorage.setItem("myBerries", berries);
       updateBerryUI();
 
-      // Firestore の fedBonus を 1 増やす（onSnapshot で自動検知されて強さが1回復）
+      const nextBonus = cachedFedBonus + 1;
+
       db.collection("gyms").doc(gymId).update({
-        fedBonus: firebase.firestore.FieldValue.increment(1)
+        fedBonus: nextBonus
       }).then(() => {
-        // 成功
+        alert("きのみをあげて、ジムの強さが1回復した！");
       }).catch((error) => {
+        console.error("更新エラー:", error);
         alert("きのみをあげるのに失敗しました: " + error.message);
       });
     }
