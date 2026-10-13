@@ -51,7 +51,7 @@
     <a href="index.html" style="color: #808e9b; text-decoration: none;">← マップに戻る</a>
   </div>
 
-  <!-- 一元管理データを読み込む -->
+  <!-- スポットデータファイルを読み込む -->
   <script src="spots.js"></script>
 
   <script>
@@ -73,12 +73,13 @@
       });
 
     const urlParams = new URLSearchParams(window.location.search);
-    const stopId = urlParams.get("id") || "玄関";
+    const stopId = urlParams.get("id") || "room";
     const hasValidQR = urlParams.get("qr") === "open";
 
+    // ★ ブラウザバック対策：アクセス直後にURLから ?qr=open を綺麗に消去
     if (hasValidQR) {
-      const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + "?id=" + stopId;
-      window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
+      const cleanUrl = window.location.pathname + "?id=" + stopId;
+      window.history.replaceState(null, '', cleanUrl);
     }
 
     // spots.js からデータを自動取得して画面に反映！
