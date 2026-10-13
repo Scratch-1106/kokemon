@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
@@ -180,6 +180,7 @@
       berryNumSpan.innerText = berries;
     }
 
+    // ★ 修正後の強さ計算処理
     function updateGymStats() {
       updateBerryUI();
 
@@ -196,10 +197,11 @@
 
       defenseTimeText.innerText = `防衛時間: ${formatDefenseTime(diffSeconds)}`;
 
-      const baseStrength = 60 - diffMinutes;
-      const calculatedStrength = baseStrength + cachedFedBonus;
+      // 減退した強さ（上限60から、経過分数を引く。ただし最低10まで）
+      const decayedStrength = Math.max(10, 60 - diffMinutes);
 
-      currentStrength = Math.min(60, Math.max(10, calculatedStrength));
+      // きのみ回復分（fedBonus）を足し算し、最大60に制限する
+      currentStrength = Math.min(60, decayedStrength + cachedFedBonus);
       strengthText.innerText = `ジムの強さ: ${currentStrength} / 60`;
     }
 
