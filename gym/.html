@@ -1,9 +1,9 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ジム：冷蔵庫</title>
+  <title>ジム</title>
   
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -20,7 +20,18 @@
     .team-neutral { border-color: #718093; }
 
     .spot-photo {
-      width: 100%; height: 180px; object-fit: cover; border-radius: 10px; border: 2px solid #718093; margin-bottom: 15px;
+      width: 100%; height: 180px; object-fit: cover; border-radius: 10px; border: 2px solid #718093; margin-bottom: 10px;
+    }
+
+    #gymDesc {
+      font-size: 13px;
+      color: #a4b0be;
+      background: #1e272e;
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      text-align: left;
+      border-left: 3px solid #00a8ff;
     }
 
     button { background: #00a8ff; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; width: 100%; }
@@ -37,9 +48,11 @@
   <div id="header-container"></div>
 
   <div class="card" id="gymCard">
-    <img src="photo.jpg" alt="冷蔵庫ジムの写真" class="spot-photo" onerror="this.style.display='none'">
+    <img id="gymPhoto" src="" alt="ジムの写真" class="spot-photo" onerror="this.style.display='none'">
+    
+    <div id="gymDesc">スポットの説明文を読み込んでいます...</div>
 
-    <h1>⚔️ ジム: 冷蔵庫</h1>
+    <h1 id="gymTitle">⚔️ ジム: 読み込み中...</h1>
     <p id="status">現在の状態: 読み込み中...</p>
     <div id="defenseTime">防衛時間: -</div>
     <div id="gymStrength">ジムの強さ: - / 60</div>
@@ -50,17 +63,19 @@
     <button id="attackBtn" onclick="startBattle()">ジムに挑む</button>
     <button id="feedBtn" onclick="feedBerry()" style="background: #e056fd; display: none;">きのみをあげる (残り: <span id="berryNum">0</span>個)</button>
     
-    <!-- フォトディスクを回す機能（5分に1回） -->
     <hr style="border: 0; border-top: 1px solid #718093; margin: 20px 0;">
     <button id="spinBtn" onclick="spinGymDisc()" style="background: #e1b12c;">フォトディスクを回す</button>
     <div id="itemResult"></div>
 
     <br><br>
-    <a href="../../index.html" style="color: #808e9b; text-decoration: none;">← マップに戻る</a>
+    <a href="index.html" style="color: #808e9b; text-decoration: none;">← マップに戻る</a>
   </div>
 
+  <!-- スポットデータファイルを読み込む -->
+  <script src="spots.js"></script>
+
   <script>
-    fetch('../../header.html')
+    fetch('header.html')
       .then(response => response.text())
       .then(data => {
         document.getElementById('header-container').innerHTML = data;
@@ -77,6 +92,21 @@
         }
       });
 
+    const urlParams = new URLSearchParams(window.location.search);
+    const gymId = urlParams.get("id") || "reizouko";
+    const hasValidQR = urlParams.get("qr") === "open";
+
+    if (hasValidQR) {
+      const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + "?id=" + gymId;
+      window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
+    }
+
+    // spots.js から該当するジムの情報を自動反映！
+    const currentGymInfo = SPOT_DATA[gymId] || { name: gymId, desc: "説明文がありません。", photo: "photo.jpg" };
+    document.getElementById("gymTitle").innerText = `⚔️ ジム: ${currentGymInfo.name}`;
+    document.getElementById("gymPhoto").src = currentGymInfo.photo;
+    document.getElementById("gymDesc").innerText = currentGymInfo.desc;
+
     const firebaseConfig = {
       apiKey: "AIzaSyDQF-SGTV70zmFyS_Mquz_OVgn260X0Aqs",
       authDomain: "kokemon-go.firebaseapp.com",
@@ -89,7 +119,6 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    const gymId = "reizouko";
     const statusText = document.getElementById("status");
     const defenseTimeText = document.getElementById("defenseTime");
     const strengthText = document.getElementById("gymStrength");
@@ -105,16 +134,6 @@
 
     const myPlayerName = localStorage.getItem("myPlayerName") || "名無しプレイヤー";
     const myTeamColor = localStorage.getItem("myTeam") || "blue";
-
-    // URLパラメータのチェックとブラウザバック対策
-    const urlParams = new URLSearchParams(window.location.search);
-    const hasValidQR = urlParams.get("qr") === "open";
-
-    // ★ 判定後すぐにURLから ?qr=open を消去（ブラウザバックしてもQR未読込になる）
-    if (hasValidQR) {
-      const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
-      window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
-    }
 
     let cachedUpdatedAt = null;
     let cachedFedBonus = 0;
