@@ -73,10 +73,16 @@
       });
 
     const urlParams = new URLSearchParams(window.location.search);
-    const stopId = urlParams.get("id") || "room";
+    let stopId = urlParams.get("id") || "room";
+
+    // 余計なスラッシュやクエリが混ざっていたら手前で安全にカットする
+    if (stopId.includes("/")) {
+      stopId = stopId.split("/")[0];
+    }
+
     const hasValidQR = urlParams.get("qr") === "open";
 
-    // ★ ブラウザバック対策：アクセス直後にURLから ?qr=open を綺麗に消去
+    // ブラウザバック対策：アクセス直後にURLから ?qr=open を綺麗に消去
     if (hasValidQR) {
       const cleanUrl = window.location.pathname + "?id=" + stopId;
       window.history.replaceState(null, '', cleanUrl);
